@@ -2,9 +2,8 @@
 
 namespace valuetypes {
 
-std::string private_function()
-{
-  return "hello from a private function";
+std::string private_function() {
+    return "hello from a private function";
 }
 
 } // namespace valuetypes
