@@ -17,6 +17,6 @@ generate_value_type(point)
 file(GLOB sources *.c *.cc *.cpp *.h *.hh)
 
 add_executable(integration_test ${sources})
-target_link_libraries(integration_test point ${GMOCK_LIBRARIES} GTest::GTest GTest::Main)
+target_link_libraries(integration_test point ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
 
 gtest_discover_tests(integration_test)

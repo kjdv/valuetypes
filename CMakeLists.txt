@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 include(GoogleTest)
 find_package(GTest MODULE REQUIRED)
 find_library(GMOCK_LIBRARIES gmock)
+find_package(rapidcheck CONFIG REQUIRED)
 enable_testing()
 
 

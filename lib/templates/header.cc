@@ -14,6 +14,11 @@ struct {{ typedef.name }} {
 
 bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+
+bool operator<(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 ## endfor
 
 {% if namespace %}}{% endif %}
