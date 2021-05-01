@@ -1,11 +1,11 @@
 function(generate_value_type name)
     add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/${name}.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/${name}.cc
-            COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${name}.yaml
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cc
+            COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAME_CURRENT_SOURCE_DIR}/${name}.yaml
             DEPENDS valuetypes
     )
 
-    add_library(${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}/${name}.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/${name}.cc)
+    add_library(${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cc)
     target_include_directories(${name}
         PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
     )

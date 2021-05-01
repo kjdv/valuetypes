@@ -1,4 +1,4 @@
-#include <point/point.hh>
+#include <point/valuetypes.hh>
 #include <gtest/gtest.h>
 
 TEST(sample, placeholder) {

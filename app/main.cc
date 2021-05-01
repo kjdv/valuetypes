@@ -9,6 +9,8 @@ int main(int argc, char **argv) {
             ("o,output", "Output directory",
                 cxxopts::value<std::string>()->default_value(
                  std::filesystem::relative(std::filesystem::current_path())))
+            ("f,filename", "Base filename (without extention) for the generated files",
+                 cxxopts::value<std::string>()->default_value("valuetypes"))
             ("c,cmake", "Generate CMakeLists.txt")
             ("input", "Input file containing type definitions",
                 cxxopts::value<std::string>())
@@ -33,7 +35,8 @@ int main(int argc, char **argv) {
     valuetypes::options generate_options{
         static_cast<bool>(results.count("cmake")),
         results["input"].as<std::string>(),
-        results["output"].as<std::string>()
+        results["output"].as<std::string>(),
+        results["filename"].as<std::string>()
     };
 
     valuetypes::generate(generate_options);
