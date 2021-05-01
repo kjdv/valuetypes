@@ -83,8 +83,6 @@ void render(const DefinitionStore& ds, const options& opts) {
 
     write(header_filename, inja::render(header, data));
     write(source_filename, inja::render(source, data));
-
-    write(output_file(opts.output_dir, ".stamp", ""), "");
 }
 
 } // namespace valuetypes
