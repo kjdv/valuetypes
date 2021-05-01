@@ -1,5 +1,5 @@
 #include <iostream>
-#include <internal_sample.hh>
+#include <generate.hh>
 #include <cxxopts.hpp>
 #include <filesystem>
 
@@ -30,11 +30,13 @@ int main(int argc, char **argv) {
          return 1;
     }
 
-    bool use_cmake = results.count("cmake");
-    std::filesystem::path output_dir = results["output"].as<std::string>();
-    std::filesystem::path input_file = results["input"].as<std::string>();
+    valuetypes::options generate_options{
+        static_cast<bool>(results.count("cmake")),
+        results["input"].as<std::string>(),
+        results["output"].as<std::string>()
+    };
 
-    std::cout << use_cmake << ' ' << output_dir << ' ' << input_file << '\n';
-    std::cout << valuetypes::private_function() << '\n';
+    valuetypes::generate(generate_options);
+
     return 0;
 }
