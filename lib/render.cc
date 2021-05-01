@@ -63,7 +63,7 @@ json defstore_to_json(const DefinitionStore& ds) {
     json j;
     j["typedefs"] = move(defs);
 
-    if (ds.namespace_) {
+    if(ds.namespace_) {
         j["namespace"] = *ds.namespace_;
     } else {
         j["namespace"] = nullptr;

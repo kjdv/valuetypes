@@ -45,13 +45,13 @@ RC_GTEST_PROP(Point, totalOrdering, (double x1, double y1, double x2, double y2)
         RC_ASSERT(!(b != a));
     };
 
-    if (x1 < x2) {
+    if(x1 < x2) {
         unequal(p1, p2);
-    } else if (x2 < x1) {
+    } else if(x2 < x1) {
         unequal(p2, p1);
-    } else if (y1 < y2) {
+    } else if(y1 < y2) {
         unequal(p1, p2);
-    } else if (y2 < y1) {
+    } else if(y2 < y1) {
         unequal(p2, p1);
     } else {
         equal(p1, p2);

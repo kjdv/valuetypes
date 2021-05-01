@@ -38,12 +38,12 @@ Member from_yaml(const kyaml::node& n) {
 
 DefinitionStore load(const kyaml::document& doc) {
     optional<string> ns;
-    if (doc.has_leaf("namespace")) {
+    if(doc.has_leaf("namespace")) {
         ns = doc.leaf_value("namespace");
     }
 
     vector<Definition> defs;
-    auto& ts = doc.get("types").as_sequence();
+    auto&              ts = doc.get("types").as_sequence();
     defs.reserve(ts.size());
 
     transform(ts.begin(), ts.end(), back_inserter(defs), [](auto&& d) {

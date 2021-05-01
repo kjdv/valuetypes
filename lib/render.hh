@@ -5,6 +5,6 @@
 
 namespace valuetypes {
 
-void render(const DefinitionStore & ds, const options &options);
+void render(const DefinitionStore& ds, const options& options);
 
 }

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <kyaml/node.hh>
+#include <optional>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
-#include <string>
-#include <stdexcept>
-#include <optional>
-#include <kyaml/node.hh>
 
 namespace valuetypes {
 
@@ -14,21 +14,21 @@ class BadDefinition : public std::runtime_error {
 };
 
 struct Member {
-    std::string name;
-    std::string type;
+    std::string                name;
+    std::string                type;
     std::optional<std::string> default_value;
 };
 
 struct Definition {
-    std::string name;
+    std::string         name;
     std::vector<Member> members;
 };
 
 struct DefinitionStore {
     std::optional<std::string> namespace_;
-    std::vector<Definition> typedefs;
+    std::vector<Definition>    typedefs;
 };
 
 DefinitionStore load(const kyaml::document& doc);
 
-}
+} // namespace valuetypes

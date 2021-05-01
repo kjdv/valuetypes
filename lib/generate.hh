@@ -6,7 +6,7 @@
 namespace valuetypes {
 
 struct options {
-    bool cmake{false};
+    bool                  cmake{false};
     std::filesystem::path input_file;
     std::filesystem::path output_dir;
     std::filesystem::path base_filename;
@@ -14,4 +14,4 @@ struct options {
 
 void generate(const options& opts);
 
-}
+} // namespace valuetypes
