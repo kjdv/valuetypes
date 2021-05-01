@@ -13,7 +13,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-unique_ptr<const kyaml::document> load(const fs::path& input_yaml) {
+unique_ptr<const kyaml::document> load_yaml(const fs::path& input_yaml) {
     ifstream      file(input_yaml);
     kyaml::parser p(file);
     return p.parse();
@@ -24,8 +24,8 @@ unique_ptr<const kyaml::document> load(const fs::path& input_yaml) {
 void generate(const options& opts) {
     fs::create_directories(opts.output_dir);
 
-    auto doc  = load(opts.input_file);
-    auto defs = DefinitionStore(*doc);
+    auto doc  = load_yaml(opts.input_file);
+    auto defs = load(*doc);
 
     render(defs, opts);
 }

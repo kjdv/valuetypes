@@ -5,6 +5,6 @@
 
 namespace valuetypes {
 
-void render(const DefinitionStore & ds, const options &options);
+void render(const std::vector<Definition> & ds, const options &options);
 
 }

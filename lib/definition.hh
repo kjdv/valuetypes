@@ -24,11 +24,6 @@ struct Definition {
     std::vector<Member> members;
 };
 
-class DefinitionStore {
-public:
-    DefinitionStore(const kyaml::document& doc);
-private:
-    std::vector<Definition> d_definitions;
-};
+std::vector<Definition> load(const kyaml::document& doc);
 
 }
