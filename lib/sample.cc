@@ -1,4 +1,4 @@
-#include <sample.hh>
+#include <internal_sample.hh>
 
 namespace valuetypes {
 
