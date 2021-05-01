@@ -37,7 +37,7 @@ Member from_yaml(const kyaml::node& n) {
 } // namespace
 
 DefinitionStore::DefinitionStore(const kyaml::document& doc) {
-    for(auto&& d : doc.as_sequence()) {
+    transform(doc.as_sequence().begin(), doc.as_sequence().end(), back_inserter(d_definitions), [](auto&& d) {
         auto& m = d->as_mapping();
 
         auto& name = extract(m, "name");
@@ -46,8 +46,8 @@ DefinitionStore::DefinitionStore(const kyaml::document& doc) {
         vector<Member> members;
         transform(mseq.begin(), mseq.end(), back_inserter(members), [](auto&& item) { return from_yaml(*item); });
 
-        d_definitions.emplace_back(Definition{name, move(members)});
-    }
+        return Definition{name, move(members)};
+    });
 }
 
 } // namespace valuetypes

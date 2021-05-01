@@ -2,7 +2,7 @@ function(generate_value_type name)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/.stamp
             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yaml
-            COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAME_CURRENT_SOURCE_DIR}/${name}.yaml
+            COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yaml
             DEPENDS valuetypes
     )
     add_custom_target(${name}_generate DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}/.stamp)
