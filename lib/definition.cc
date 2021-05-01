@@ -36,7 +36,7 @@ Member from_yaml(const kyaml::node& n) {
 
 } // namespace
 
-std::vector<Definition> load(const kyaml::document& doc) {
+DefinitionStore load(const kyaml::document& doc) {
     vector<Definition> defs;
     defs.reserve(doc.as_sequence().size());
 
@@ -53,7 +53,7 @@ std::vector<Definition> load(const kyaml::document& doc) {
         return Definition{name, move(members)};
     });
 
-    return defs;
+    return DefinitionStore{move(defs)};
 }
 
 } // namespace valuetypes

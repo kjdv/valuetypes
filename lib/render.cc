@@ -23,7 +23,7 @@ void write(const fs::path& p, string_view content) {
 
 } // namespace
 
-void render(const vector<Definition>& ds, const options& opts) {
+void render(const DefinitionStore& ds, const options& opts) {
     auto header_filename = output_file(opts.output_dir, opts.base_filename, ".hh");
     auto source_filename = output_file(opts.output_dir, opts.base_filename, ".cc");
 

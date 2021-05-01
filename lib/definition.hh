@@ -24,6 +24,10 @@ struct Definition {
     std::vector<Member> members;
 };
 
-std::vector<Definition> load(const kyaml::document& doc);
+struct DefinitionStore {
+    std::vector<Definition> definitions;
+};
+
+DefinitionStore load(const kyaml::document& doc);
 
 }
