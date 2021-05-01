@@ -1,11 +1,14 @@
 function(generate_value_type name)
     add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cc
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/.stamp
+            MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/${name}.yaml
             COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAME_CURRENT_SOURCE_DIR}/${name}.yaml
             DEPENDS valuetypes
     )
+    add_custom_target(${name}_generate DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}/.stamp)
 
     add_library(${name} ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.hh ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cc)
+    add_dependencies(${name} ${name}_generate)
     target_include_directories(${name}
         PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
     )

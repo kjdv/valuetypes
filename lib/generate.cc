@@ -34,6 +34,8 @@ void generate(const options &opts)
 
     write(header_filename, "#pragma once\n");
     write(source_filename, "#include \"valuetypes.hh\"\n");
+
+    write(output_file(opts.output_dir, ".stamp", ""), "");
 }
 
 }
