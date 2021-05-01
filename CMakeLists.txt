@@ -20,6 +20,7 @@ find_package(Composite CONFIG REQUIRED)
 add_subdirectory(lib)
 add_subdirectory(app)
 add_subdirectory(test)
+add_subdirectory(integration_test)
 
 # install rules
 install(TARGETS valuetypes

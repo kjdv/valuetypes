@@ -25,7 +25,7 @@ void write(const fs::path& p, string_view content) {
 
 void generate(const options &opts)
 {
-    const string name = "example";
+    const string name = "point";
 
     fs::create_directories(opts.output_dir);
 
@@ -33,7 +33,7 @@ void generate(const options &opts)
     auto source_filename = output_file(opts.output_dir, name + ".cc");
 
     write(header_filename, "#pragma once\n");
-    write(source_filename, "#include \"example.hh\"\n");
+    write(source_filename, "#include \"point.hh\"\n");
 }
 
 }
