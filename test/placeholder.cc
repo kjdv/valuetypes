@@ -4,7 +4,7 @@ namespace valuetypes {
 namespace {
 
 TEST(sample, placeholder) {
-    EXPECT_EQ(4, 2+2);
+    EXPECT_EQ(4, 2 + 2);
 }
 
 } // namespace
