@@ -3,6 +3,8 @@
 const std::string valuetypes::source = R"raw(#include "{{ options.base_filename }}.hh"
 #include <tuple>
 
+{% if namespace %}namespace {{ namespace }} { {% endif %}
+
 using namespace std;
 ## for typedef in typedefs
 
@@ -22,4 +24,6 @@ bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
     return !(a == b);
 }
 ## endfor
+
+{% if namespace %}}{% endif %}
 )raw";

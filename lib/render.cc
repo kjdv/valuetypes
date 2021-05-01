@@ -56,12 +56,18 @@ json defintion_to_json(const Definition& d) {
 
 json defstore_to_json(const DefinitionStore& ds) {
     vector<json> defs;
-    defs.reserve(ds.definitions.size());
+    defs.reserve(ds.typedefs.size());
 
-    transform(ds.definitions.begin(), ds.definitions.end(), back_inserter(defs), defintion_to_json);
+    transform(ds.typedefs.begin(), ds.typedefs.end(), back_inserter(defs), defintion_to_json);
 
     json j;
     j["typedefs"] = move(defs);
+
+    if (ds.namespace_) {
+        j["namespace"] = *ds.namespace_;
+    } else {
+        j["namespace"] = nullptr;
+    }
 
     return j;
 }

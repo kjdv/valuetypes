@@ -25,7 +25,8 @@ struct Definition {
 };
 
 struct DefinitionStore {
-    std::vector<Definition> definitions;
+    std::optional<std::string> namespace_;
+    std::vector<Definition> typedefs;
 };
 
 DefinitionStore load(const kyaml::document& doc);

@@ -37,10 +37,16 @@ Member from_yaml(const kyaml::node& n) {
 } // namespace
 
 DefinitionStore load(const kyaml::document& doc) {
-    vector<Definition> defs;
-    defs.reserve(doc.as_sequence().size());
+    optional<string> ns;
+    if (doc.has_leaf("namespace")) {
+        ns = doc.leaf_value("namespace");
+    }
 
-    transform(doc.as_sequence().begin(), doc.as_sequence().end(), back_inserter(defs), [](auto&& d) {
+    vector<Definition> defs;
+    auto& ts = doc.get("types").as_sequence();
+    defs.reserve(ts.size());
+
+    transform(ts.begin(), ts.end(), back_inserter(defs), [](auto&& d) {
         auto& m = d->as_mapping();
 
         auto& name = extract(m, "name");
@@ -53,7 +59,7 @@ DefinitionStore load(const kyaml::document& doc) {
         return Definition{name, move(members)};
     });
 
-    return DefinitionStore{move(defs)};
+    return DefinitionStore{ns, move(defs)};
 }
 
 } // namespace valuetypes

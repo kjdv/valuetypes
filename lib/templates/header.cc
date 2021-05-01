@@ -2,6 +2,8 @@
 
 const std::string valuetypes::header = R"raw(
 #pragma once
+
+{% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs
 
 struct {{ typedef.name }} {
@@ -14,4 +16,5 @@ bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
 bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 ## endfor
 
+{% if namespace %}}{% endif %}
 )raw";
