@@ -50,5 +50,5 @@ bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
 
 ## endfor
 
-{% if namespace %}}{% endif %}
+{% if namespace %}} // namespace {{ namespace }}{% endif %}
 )raw";
