@@ -1,4 +1,4 @@
-file(GLOB sources *.c *.cc *.cpp *.h *.hh)
+file(GLOB sources *.cpp)
 
 add_executable(valuetypes_test ${sources})
 target_link_libraries(valuetypes_test valuetypes_common ${GMOCK_LIBRARIES} GTest::GTest GTest::Main)

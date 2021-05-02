@@ -1,7 +1,7 @@
 #pragma once
 
-#include "definition.hh"
-#include "generate.hh"
+#include "definition.h"
+#include "generate.h"
 
 namespace valuetypes {
 

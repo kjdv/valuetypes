@@ -1,4 +1,4 @@
-file(GLOB sources *.cc *.cpp *.c *.hh *.h templates/*.hh templates/*.cc)
+file(GLOB sources *.h *.cpp templates/*.h templates/*.cpp)
 
 add_library(valuetypes_common
     ${sources}

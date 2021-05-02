@@ -1,5 +1,5 @@
-#include "render.hh"
-#include "templates/templates.hh"
+#include "render.h"
+#include "templates/templates.h"
 #include <algorithm>
 #include <fstream>
 #include <inja/inja.hpp>
@@ -89,8 +89,8 @@ json opts_to_json(const options& opts) {
 } // namespace
 
 void render(const DefinitionStore& ds, const options& opts) {
-    auto header_filename = output_file(opts.output_dir, opts.base_filename, ".hh");
-    auto source_filename = output_file(opts.output_dir, opts.base_filename, ".cc");
+    auto header_filename = output_file(opts.output_dir, opts.base_filename, ".h");
+    auto source_filename = output_file(opts.output_dir, opts.base_filename, ".cpp");
 
     json data       = defstore_to_json(ds);
     data["options"] = opts_to_json(opts);

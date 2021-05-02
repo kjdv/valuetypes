@@ -1,6 +1,6 @@
-#include "generate.hh"
-#include "definition.hh"
-#include "render.hh"
+#include "generate.h"
+#include "definition.h"
+#include "render.h"
 #include <fstream>
 #include <kyaml/kyaml.hh>
 #include <string>

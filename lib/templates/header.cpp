@@ -1,4 +1,4 @@
-#include "templates.hh"
+#include "templates.h"
 
 const std::string valuetypes::header = R"raw(
 #pragma once

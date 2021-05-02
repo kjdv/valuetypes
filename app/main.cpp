@@ -1,6 +1,6 @@
 #include <cxxopts.hpp>
 #include <filesystem>
-#include <generate.hh>
+#include <generate.h>
 #include <iostream>
 
 int main(int argc, char** argv) {
