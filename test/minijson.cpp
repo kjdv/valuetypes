@@ -56,13 +56,20 @@ using token = std::variant<
     eof_token>;
 
 template <typename T>
-bool match_token(const token& t) {
+bool match_token(const token& t) noexcept {
     return std::holds_alternative<T>(t);
+}
+
+template <typename T>
+void check_token(const token& t) {
+    if(!match_token<T>(t)) {
+        throw BadJson("unexpected token");
+    }
 }
 
 const int eof = std::char_traits<char>::eof();
 
-int non_ws(std::istream& str) {
+int non_ws(std::istream& str) noexcept {
     char c = 0;
     while(str.get(c)) {
         if(!isspace(c))
@@ -79,7 +86,7 @@ void extract_literal(std::istream& input, std::string_view tail) {
     }
 }
 
-token extract_number(std::istream& input, char head) {
+token extract_number(std::istream& input, char head) noexcept {
     bool is_float  = false;
     bool had_point = false;
     bool had_exp   = false;
@@ -118,13 +125,13 @@ token extract_number(std::istream& input, char head) {
     }
 }
 
-bool is_hex(char c) {
+bool is_hex(char c) noexcept {
     return (c >= '0' && c <= '9') ||
            (c >= 'a' && c <= 'f') ||
            (c >= 'A' && c <= 'F');
 }
 
-uint8_t single_decode(char h) {
+uint8_t single_decode(char h) noexcept {
     if(h >= '0' && h <= '9')
         return h - '0';
     else if(h >= 'a' && h <= 'f')
@@ -267,6 +274,76 @@ token next_token(std::istream& input) {
     }
     return eof_token{};
 }
+
+template <typename T>
+void match_and_consume(std::istream& stream) {
+    auto t = next_token(stream);
+    check_token<T>(t);
+}
+
+template <typename F>
+void read_mapping(std::istream& stream, F&& consumer) {
+    match_and_consume<start_mapping_token>(stream);
+
+    auto tok = next_token(stream);
+    while(match_token<string_token>(tok)) {
+        auto& key = std::get<string_token>(tok).value;
+
+        match_and_consume<mapper_token>(stream);
+
+        consumer(stream, key);
+
+        tok = next_token(stream);
+        if(match_token<separator_token>(tok)) {
+            tok = next_token(stream);
+        } else {
+            break;
+        }
+    }
+
+    check_token<end_mapping_token>(tok);
+}
+
+template <typename T, typename Tok>
+T extract(const token& tok) {
+    std::istringstream istream(std::get<Tok>(tok).value);
+    T                  target;
+    istream >> target;
+    return target;
+}
+
+template <typename T>
+T read_scalar(std::istream& stream) {
+    auto tok = next_token(stream);
+
+    if constexpr(std::is_same_v<T, bool>) {
+        if(match_token<true_token>(tok)) {
+            return true;
+        } else if(match_token<false_token>(tok)) {
+            return false;
+        } else {
+            throw BadJson("expected either 'true' or 'false");
+        }
+    } else if constexpr(std::is_floating_point_v<T>) {
+        if(match_token<float_token>(tok)) {
+            return extract<T, float_token>(tok);
+        } else if(match_token<int_token>(tok)) {
+            return extract<T, int_token>(tok);
+        } else {
+            throw BadJson("unexpected token");
+        }
+    } else if constexpr(std::is_integral_v<T>) {
+        check_token<int_token>(tok);
+        return extract<T, int_token>(tok);
+    } else if constexpr(std::is_same_v<T, std::string>) {
+        check_token<string_token>(tok);
+        return std::get<string_token>(tok).value;
+    } else {
+        assert(false);
+        return T{};
+    }
+}
+
 } // namespace minijson
 
 namespace {
@@ -293,7 +370,8 @@ std::string token_s(const token& t) {
         } else {
             return std::to_string(t.index());
         }
-    }, t);
+    },
+                      t);
 }
 
 TEST_P(tokenizer_test, tokens) {
@@ -375,6 +453,44 @@ TEST(tokenizer, bad_literal) {
 TEST(tokenizer, bad_token) {
     std::stringstream stream("!");
     EXPECT_THROW(next_token(stream), BadJson);
+}
+
+struct Struct {
+    double      x{0.0};
+    double      y{0.0};
+    int         n{0};
+    bool        b1{false};
+    bool        b2{true};
+    std::string s;
+};
+
+TEST(parser, read_mapping) {
+    std::stringstream stream(R"({ "x": 3.14, "y": 2.72, "n": 123, "b1": true, "b2": false, "s": "abc"})");
+    Struct            p;
+
+    read_mapping(stream, [&](std::istream& stream, std::string_view key) {
+        if(key == "x") {
+            p.x = read_scalar<double>(stream);
+        } else if(key == "y") {
+            p.y = read_scalar<double>(stream);
+        } else if(key == "n") {
+            p.n = read_scalar<int>(stream);
+        } else if(key == "b1") {
+            p.b1 = read_scalar<bool>(stream);
+        } else if(key == "b2") {
+            p.b2 = read_scalar<bool>(stream);
+        } else if(key == "s") {
+            p.s = read_scalar<std::string>(stream);
+        }
+    });
+    match_and_consume<eof_token>(stream);
+
+    EXPECT_EQ(3.14, p.x);
+    EXPECT_EQ(2.72, p.y);
+    EXPECT_EQ(123, p.n);
+    EXPECT_TRUE(p.b1);
+    EXPECT_FALSE(p.b2);
+    EXPECT_EQ("abc", p.s);
 }
 
 } // namespace
