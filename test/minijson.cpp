@@ -388,9 +388,9 @@ T read_scalar(std::istream& stream) {
 }
 
 template <typename T>
-std::optional<T> read_optional_scalar(std::istream &stream) {
+std::optional<T> read_optional_scalar(std::istream& stream) {
     auto tok = next_token(stream);
-    if (match_token<null_token>(tok)) {
+    if(match_token<null_token>(tok)) {
         return std::optional<T>{};
     } else {
         return read_actual_scalar<T>(tok);
@@ -398,14 +398,14 @@ std::optional<T> read_optional_scalar(std::istream &stream) {
 }
 
 template <typename T, typename F>
-void read_optional_mapping(std::istream &stream, std::optional<T> &target, F&& consumer) {
+void read_optional_mapping(std::istream& stream, std::optional<T>& target, F&& consumer) {
     auto tok = next_token(stream);
-    if (match_token<null_token>(tok)) {
+    if(match_token<null_token>(tok)) {
         target.reset();
     } else {
         check_token<start_mapping_token>(tok);
 
-        if (!target) {
+        if(!target) {
             target = T{};
         }
 
@@ -414,21 +414,20 @@ void read_optional_mapping(std::istream &stream, std::optional<T> &target, F&& c
 }
 
 template <typename T, typename F>
-void read_optional_sequence(std::istream &stream, std::optional<T> &target, F&& consumer) {
+void read_optional_sequence(std::istream& stream, std::optional<T>& target, F&& consumer) {
     auto tok = next_token(stream);
-    if (match_token<null_token>(tok)) {
+    if(match_token<null_token>(tok)) {
         target.reset();
     } else {
         check_token<start_sequence_token>(tok);
 
-        if (!target) {
+        if(!target) {
             target = T{};
         }
 
         read_elements(stream, *target, std::forward<F>(consumer));
     }
 }
-
 
 } // namespace minijson
 
@@ -546,18 +545,18 @@ struct Nested {
 };
 
 struct Struct {
-    double           x{0.0};
-    double           y{0.0};
-    int              n{0};
-    bool             b1{false};
-    bool             b2{true};
-    std::string      s;
-    std::vector<int> v;
-    std::optional<int> o1;
-    std::optional<int> o2;
-    Nested nested;
-    std::optional<Nested> o3;
-    std::optional<Nested> o4;
+    double                          x{0.0};
+    double                          y{0.0};
+    int                             n{0};
+    bool                            b1{false};
+    bool                            b2{true};
+    std::string                     s;
+    std::vector<int>                v;
+    std::optional<int>              o1;
+    std::optional<int>              o2;
+    Nested                          nested;
+    std::optional<Nested>           o3;
+    std::optional<Nested>           o4;
     std::optional<std::vector<int>> o5;
     std::optional<std::vector<int>> o6;
 };
@@ -585,7 +584,7 @@ TEST(parser, read_mapping) {
     "o6": [4, 5, 6]
 })");
     Struct            p;
-    read_mapping(stream, p, [](std::istream& stream, Struct &target, std::string_view key) {
+    read_mapping(stream, p, [](std::istream& stream, Struct& target, std::string_view key) {
         if(key == "x") {
             target.x = read_scalar<double>(stream);
         } else if(key == "y") {
@@ -599,7 +598,7 @@ TEST(parser, read_mapping) {
         } else if(key == "s") {
             target.s = read_scalar<std::string>(stream);
         } else if(key == "v") {
-            read_sequence(stream, target.v, [&](std::istream& stream, std::vector<int> &v) {
+            read_sequence(stream, target.v, [&](std::istream& stream, std::vector<int>& v) {
                 v.push_back(read_scalar<int>(stream));
             });
         } else if(key == "o1") {
@@ -607,29 +606,29 @@ TEST(parser, read_mapping) {
         } else if(key == "o2") {
             target.o2 = read_optional_scalar<int>(stream);
         } else if(key == "nested") {
-            read_mapping(stream, target.nested, [](std::istream &s, Nested &n, std::string_view k) {
-                if (k == "value") {
+            read_mapping(stream, target.nested, [](std::istream& s, Nested& n, std::string_view k) {
+                if(k == "value") {
                     n.value = read_scalar<std::string>(s);
                 }
             });
         } else if(key == "o3") {
-            read_optional_mapping(stream, target.o3, [](std::istream &s, Nested &n, std::string_view k) {
-                if (k == "value") {
+            read_optional_mapping(stream, target.o3, [](std::istream& s, Nested& n, std::string_view k) {
+                if(k == "value") {
                     n.value = read_scalar<std::string>(s);
                 }
             });
         } else if(key == "o4") {
-            read_optional_mapping(stream, target.o4, [](std::istream &s, Nested &n, std::string_view k) {
-                if (k == "value") {
+            read_optional_mapping(stream, target.o4, [](std::istream& s, Nested& n, std::string_view k) {
+                if(k == "value") {
                     n.value = read_scalar<std::string>(s);
                 }
             });
         } else if(key == "o5") {
-            read_optional_sequence(stream, target.o5, [](std::istream &s, std::vector<int> &v) {
+            read_optional_sequence(stream, target.o5, [](std::istream& s, std::vector<int>& v) {
                 v.push_back(read_scalar<int>(s));
             });
         } else if(key == "o6") {
-            read_optional_sequence(stream, target.o6, [](std::istream &s, std::vector<int> &v) {
+            read_optional_sequence(stream, target.o6, [](std::istream& s, std::vector<int>& v) {
                 v.push_back(read_scalar<int>(s));
             });
         }

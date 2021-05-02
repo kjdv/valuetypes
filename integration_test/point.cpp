@@ -96,8 +96,28 @@ TEST(Point, hashIsUsableForContainers) {
 
 TEST(Point, insertion) {
     std::stringstream stream;
-    vt::Point p{1.0, 3.14};
+    vt::Point         p{1.0, 3.14};
 
     stream << p;
     EXPECT_EQ(R"({ "x": 1, "y": 3.14 })", stream.str());
+}
+
+RC_GTEST_PROP(Point, marshalling, (double x, double y)) {
+    auto massage = [](double v) {
+        std::stringstream s;
+        s << v;
+        double n;
+        s >> n;
+        return n;
+    };
+
+    vt::Point p1{massage(x), massage(y)};
+
+    std::stringstream stream;
+    stream << p1;
+
+    vt::Point p2;
+    stream >> p2;
+
+    RC_ASSERT(p1 == p2);
 }
