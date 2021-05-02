@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <point/valuetypes.hh>
+#include <point/valuetypes.h>
 #include <rapidcheck/gtest.h>
 #include <unordered_set>
 
@@ -60,7 +60,7 @@ RC_GTEST_PROP(Point, totalOrdering, (double x1, double y1, double x2, double y2)
 }
 
 RC_GTEST_PROP(Point, hashing, (double x1, double y1, double x2, double y2)) {
-    vt::Point p1{x1, y2};
+    vt::Point p1{x1, y1};
     vt::Point p2{x2, y2};
 
     auto h1 = std::hash<vt::Point>{}(p1);
@@ -92,4 +92,12 @@ TEST(Point, hashIsUsableForContainers) {
 
     EXPECT_NE(s.end(), s.find(p1));
     EXPECT_NE(s.end(), s.find(p2));
+}
+
+TEST(Point, insertion) {
+    std::stringstream stream;
+    vt::Point p{1.0, 3.14};
+
+    stream << p;
+    EXPECT_EQ(R"({ "x": 1, "y": 3.14 })", stream.str());
 }

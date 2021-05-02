@@ -3,10 +3,23 @@
 const std::string valuetypes::source = R"raw(#include "{{ options.base_filename }}.h"
 #include <tuple>
 #include <utility>
+#include <iostream>
+#include <iomanip>
+#include <type_traits>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 
+namespace {
+
 using namespace std;
+
+template <typename T>
+void to_json(ostream &out, const T &v) {
+    out << v;
+}
+
+} // anonymous namespace
+
 ## for typedef in typedefs
 
 bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
@@ -48,6 +61,22 @@ bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept
 bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
     return !(a < b);
 }
+
+std::ostream &operator<<(std::ostream& out, const {{typedef.name }}& v) {
+    to_json(out, v);
+    return out;
+}
+
+void to_json(std::ostream& out, const {{typedef.name }}& v) {
+    out << "{ ";
+## for member in typedef.members
+    out << quoted("{{ member.name }}") << ": ";
+    to_json(out, v.{{member.name}});
+{% if not loop.is_last %}    out << ", ";{% endif %}
+## endfor
+    out << " }";
+}
+
 
 ## endfor
 

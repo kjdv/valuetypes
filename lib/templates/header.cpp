@@ -4,6 +4,7 @@ const std::string valuetypes::header = R"raw(
 #pragma once
 
 #include <functional>
+#include <iosfwd>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs
@@ -21,6 +22,11 @@ bool operator<(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept
 bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+
+std::ostream &operator<<(std::ostream& out, const {{typedef.name }}& v);
+
+void to_json(std::ostream& out, const {{typedef.name }}& v);
+
 ## endfor
 
 {% if namespace %}} // namespace {{ namespace }}{% endif %}
