@@ -99,19 +99,11 @@ TEST(Point, insertion) {
     vt::Point         p{1.0, 3.14};
 
     stream << p;
-    EXPECT_EQ(R"({ "x": 1, "y": 3.14 })", stream.str());
+    EXPECT_EQ(R"({ "x": 1, "y": 3.14000000000000012 })", stream.str());
 }
 
 RC_GTEST_PROP(Point, marshalling, (double x, double y)) {
-    auto massage = [](double v) {
-        std::stringstream s;
-        s << v;
-        double n;
-        s >> n;
-        return n;
-    };
-
-    vt::Point p1{massage(x), massage(y)};
+    vt::Point p1{x, y};
 
     std::stringstream stream;
     stream << p1;

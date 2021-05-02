@@ -436,7 +436,7 @@ void read_optional_sequence(std::istream &stream, std::optional<T> &target, F&& 
 
 template <typename T>
 void to_json(ostream &out, T v) {
-    out << v;
+    out << setprecision(18) << v;
 }
 
 template <typename T>
