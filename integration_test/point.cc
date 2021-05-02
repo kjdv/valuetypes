@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <point/valuetypes.hh>
 #include <rapidcheck/gtest.h>
+#include <unordered_set>
 
 TEST(Point, constructable) {
     vt::Point p1;
@@ -56,4 +57,39 @@ RC_GTEST_PROP(Point, totalOrdering, (double x1, double y1, double x2, double y2)
     } else {
         equal(p1, p2);
     }
+}
+
+RC_GTEST_PROP(Point, hashing, (double x1, double y1, double x2, double y2)) {
+    vt::Point p1{x1, y2};
+    vt::Point p2{x2, y2};
+
+    auto h1 = std::hash<vt::Point>{}(p1);
+    auto h2 = std::hash<vt::Point>{}(p2);
+
+    if(p1 == p2) {
+        RC_ASSERT(h1 == h2);
+    } else {
+        // failure is unlikely but possible, how to assert for that?
+        RC_ASSERT(h1 != h2);
+    }
+}
+
+TEST(Point, hashIsUsableForContainers) {
+    vt::Point p1;
+    vt::Point p2{1.0, 2.0};
+
+    std::unordered_set<vt::Point> s;
+
+    EXPECT_EQ(s.end(), s.find(p1));
+    EXPECT_EQ(s.end(), s.find(p2));
+
+    s.insert(p1);
+
+    EXPECT_NE(s.end(), s.find(p1));
+    EXPECT_EQ(s.end(), s.find(p2));
+
+    s.insert(p2);
+
+    EXPECT_NE(s.end(), s.find(p1));
+    EXPECT_NE(s.end(), s.find(p2));
 }
