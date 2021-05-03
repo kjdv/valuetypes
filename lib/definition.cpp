@@ -19,13 +19,13 @@ Member make_double(string_view name, string_view default_value = "0.0") {
     return make_basic(name, "double", default_value);
 }
 
-const string& extract(const kyaml::mapping& m, string_view key) {
-    return m.get(std::string(key)).as_scalar().get();
+string_view extract(const composite::mapping& m, string_view key) {
+    return m.at(string(key)).as<string>();
 }
 
-Member from_yaml(const kyaml::node& n) {
-    auto& m    = n.as_mapping();
-    auto& type = extract(m, "type");
+Member from_composite(const composite::composite& n) {
+    auto& m    = n.as<composite::mapping>();
+    auto  type = extract(m, "type");
 
     if(type == "double") {
         return make_double(extract(m, "name"));
@@ -36,27 +36,28 @@ Member from_yaml(const kyaml::node& n) {
 
 } // namespace
 
-DefinitionStore load(const kyaml::document& doc) {
+DefinitionStore load(const kjson::document& doc) {
+    auto&            as_map = doc.as<composite::mapping>();
     optional<string> ns;
-    if(doc.has_leaf("namespace")) {
-        ns = doc.leaf_value("namespace");
+    if(auto it = as_map.find("namespace"); it != as_map.end()) {
+        ns = it->second.as<string>();
     }
 
     vector<Definition> defs;
-    auto&              ts = doc.get("types").as_sequence();
+    auto&              ts = as_map.at("types").as<composite::sequence>();
     defs.reserve(ts.size());
 
-    transform(ts.begin(), ts.end(), back_inserter(defs), [](auto&& d) {
-        auto& m = d->as_mapping();
+    transform(ts.begin(), ts.end(), back_inserter(defs), [](const composite::composite& d) {
+        auto& m = d.as<composite::mapping>();
 
-        auto& name = extract(m, "name");
-        auto& mseq = m.get("members").as_sequence();
+        auto  name = extract(m, "name");
+        auto& mseq = m.at("members").as<composite::sequence>();
 
         vector<Member> members;
         members.reserve(mseq.size());
-        transform(mseq.begin(), mseq.end(), back_inserter(members), [](auto&& item) { return from_yaml(*item); });
+        transform(mseq.begin(), mseq.end(), back_inserter(members), from_composite);
 
-        return Definition{name, move(members)};
+        return Definition{string(name), move(members)};
     });
 
     return DefinitionStore{ns, move(defs)};

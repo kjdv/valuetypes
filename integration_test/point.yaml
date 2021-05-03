@@ -1,8 +1,0 @@
-namespace: vt
-types:
-  - name: Point
-    members:
-      - name: x
-        type: double
-      - name: y
-        type: double

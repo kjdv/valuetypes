@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kyaml/node.hh>
+#include <kjson/json.hh>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,6 +29,6 @@ struct DefinitionStore {
     std::vector<Definition>    typedefs;
 };
 
-DefinitionStore load(const kyaml::document& doc);
+DefinitionStore load(const kjson::document& doc);
 
 } // namespace valuetypes

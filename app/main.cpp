@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
     cxxopts::Options options("valuetypes", "C++ code generator for value types");
     options.add_options()("o,output", "Output directory", cxxopts::value<std::string>()->default_value(std::filesystem::relative(std::filesystem::current_path())))("f,filename", "Base filename (without extention) for the generated files", cxxopts::value<std::string>()->default_value("valuetypes"))("c,cmake", "Generate CMakeLists.txt")("input", "Input file containing type definitions", cxxopts::value<std::string>())("h,help", "Print help message");
     options.parse_positional({"input"});
-    options.positional_help("input.yaml");
+    options.positional_help("input.json");
 
     auto results = options.parse(argc, argv);
 

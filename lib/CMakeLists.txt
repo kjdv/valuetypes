@@ -11,6 +11,6 @@ target_include_directories(valuetypes_common
 
 
 target_link_libraries(valuetypes_common
-    PUBLIC pantor::inja Kyaml::kyaml
+    PUBLIC pantor::inja Kjson::kjson
 )
 

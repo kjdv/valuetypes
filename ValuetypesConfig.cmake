@@ -5,5 +5,5 @@ find_package(Inja CONFIG REQUIRED)
 
 find_package(Cxxopts CONFIG REQUIRED)
 
-find_package(Kyaml CONFIG REQUIRED)
+find_package(Kjson CONFIG REQUIRED)
 
