@@ -1,7 +1,7 @@
 #include "definition.h"
 #include <algorithm>
 #include <string>
-#include <unordered_set>
+#include <unordered_map>
 
 namespace valuetypes {
 
@@ -9,16 +9,21 @@ using namespace std;
 
 namespace {
 
-const unordered_set<string_view> int_like = {"int", "unsigned int", "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t"};
-const unordered_set<string_view> float_like = {"float", "double", "unsigned float", "unsigned double"};
+const unordered_map<string_view, string_view> int_like = {
+    {"int", "int"},
+    {"uint", "unsigned int"},
+    {"int8", "int8_t"},
+    {"uint8", "uint8_t"},
+    {"int16", "int16_t"},
+    {"uint16", "uint16_t"},
+    {"int32", "int32_t"},
+    {"uint32", "uint32_t"},
+    {"int64", "int64_t"},
+    {"uint64", "uint64_t"}};
 
-bool is_int_like(string_view type) {
-    return int_like.find(type) != int_like.end();
-}
-
-bool is_float_like(string_view type) {
-    return float_like.find(type) != float_like.end();
-}
+const unordered_map<string_view, string_view> float_like = {
+    {"float", "float"},
+    {"double", "double"}};
 
 Member make_basic(string_view name, string_view type, string_view default_value) {
     return Member{
@@ -46,14 +51,14 @@ string_view extract(const composite::mapping& m, string_view key) {
 Member from_composite(const composite::composite& n) {
     auto& m    = n.as<composite::mapping>();
     auto  type = extract(m, "type");
-    auto name = extract(m, "name");
+    auto  name = extract(m, "name");
 
     if(type == "bool") {
         return make_bool(name);
-    } else if(is_int_like(type)) {
-        return make_int_like(name, type);
-    } else if(is_float_like(type)) {
-        return make_float_like(name, type);
+    } else if(auto it = int_like.find(type); it != int_like.end()) {
+        return make_int_like(name, it->second);
+    } else if(auto it = float_like.find(type); it != float_like.end()) {
+        return make_float_like(name, it->second);
     } else if(type == "string") {
         return Member{string(name), "std::string", optional<string>{}};
     } else {

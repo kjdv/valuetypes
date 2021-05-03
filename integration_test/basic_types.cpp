@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include <basic_types/valuetypes.h>
+#include <gtest/gtest.h>
 #include <rapidcheck/gtest.h>
 #include <sstream>
 #include <unordered_set>
@@ -19,7 +19,7 @@ TEST(BasicTypes, construction) {
 
 TEST(BasicTypes, json) {
     ostringstream stream;
-    BasicTypes bt{};
+    BasicTypes    bt{};
     stream << bt;
 
     auto expect = R"({ "truth": false, "n": 0, "x": 0, "s": "" })";
@@ -61,7 +61,6 @@ TEST(BasicTypes, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(bt2));
 }
 
-
 RC_GTEST_PROP(BasicTypes, marshalling, (bool truth, int n, double x, string s)) {
     BasicTypes bt1{truth, n, x, move(s)};
 
@@ -74,5 +73,5 @@ RC_GTEST_PROP(BasicTypes, marshalling, (bool truth, int n, double x, string s)) 
     RC_ASSERT(bt1 == bt2);
 }
 
-}
-}
+} // namespace
+} // namespace bt
