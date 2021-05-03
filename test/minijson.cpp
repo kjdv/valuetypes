@@ -9,15 +9,17 @@
 
 namespace valuetypes {
 
+using namespace std;
+
 // TBD: how to include minijson in generated code? As separate library (complicating integrations into target source), or
 //      part of generated code (duplication)
 //      For now: dirty and practical: develop here and copy-paste into generated source
 
-namespace minijson {
+namespace minijson { // declerations
 
-class BadJson : public std::runtime_error {
+class BadJson : public runtime_error {
   public:
-    using std::runtime_error::runtime_error;
+    using runtime_error::runtime_error;
 };
 
 // tokens
@@ -28,20 +30,20 @@ struct end_sequence_token {};
 struct separator_token {};
 struct mapper_token {};
 struct string_token {
-    std::string value;
+    string value;
 };
 struct int_token {
-    std::string value;
+    string value;
 };
 struct float_token {
-    std::string value;
+    string value;
 };
 struct true_token {};
 struct false_token {};
 struct null_token {};
 struct eof_token {};
 
-using token = std::variant<
+using token = variant<
     start_mapping_token,
     end_mapping_token,
     start_sequence_token,
@@ -56,9 +58,70 @@ using token = std::variant<
     null_token,
     eof_token>;
 
+class Tokenizer {
+  public:
+    Tokenizer(istream* stream)
+      : d_stream(stream) {
+        assert(d_stream);
+        advance();
+    }
+
+    const token& advance();
+
+    const token& current() const noexcept {
+        return d_current;
+    }
+
+  private:
+    istream* d_stream;
+    token    d_current;
+};
+
+class Parser {
+  public:
+    Parser(istream* stream)
+      : d_tok(stream) {}
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
+    T read_mapping(F&& consume);
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
+    T read_sequence(F&& consume);
+
+    template <typename T>
+    T read_scalar();
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
+    optional<T> read_optional_mapping(F&& consume);
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
+    optional<T> read_optional_sequence(F&& consume);
+
+    template <typename T>
+    optional<T> read_optional_scalar();
+
+    bool is_eof() const noexcept;
+
+  private:
+    template <typename T, typename F>
+    void read_members(T& target, F&& consume);
+
+    template <typename T, typename F>
+    void read_kvpair(T& target, F&& consume);
+
+    template <typename T, typename F>
+    void read_elements(T& target, F&& consume);
+
+    Tokenizer d_tok;
+};
+
+} // namespace minijson
+
+namespace minijson { // definitions
+
 template <typename T>
-bool match_token(const token& t) noexcept {
-    return std::holds_alternative<T>(t);
+constexpr bool match_token(const token& t) noexcept {
+    return holds_alternative<T>(t);
 }
 
 template <typename T>
@@ -68,9 +131,159 @@ void check_token(const token& t) {
     }
 }
 
-const int eof = std::char_traits<char>::eof();
+template <typename T, typename F>
+T Parser::read_mapping(F&& consume) {
+    check_token<start_mapping_token>(d_tok.current());
+    d_tok.advance();
 
-int non_ws(std::istream& str) noexcept {
+    T target{};
+    read_members(target, forward<F>(consume));
+
+    check_token<end_mapping_token>(d_tok.current());
+    d_tok.advance();
+
+    return target;
+}
+
+template <typename T, typename F>
+T Parser::read_sequence(F&& consume) {
+    check_token<start_sequence_token>(d_tok.current());
+    d_tok.advance();
+
+    T target{};
+    read_elements(target, forward<F>(consume));
+
+    check_token<end_sequence_token>(d_tok.current());
+    d_tok.advance();
+
+    return target;
+}
+
+bool Parser::is_eof() const noexcept {
+    return match_token<eof_token>(d_tok.current());
+}
+
+template <typename T, typename F>
+void Parser::read_members(T& target, F&& consume) {
+    while(match_token<string_token>(d_tok.current())) {
+        read_kvpair(target, forward<F>(consume));
+
+        if(match_token<separator_token>(d_tok.current())) {
+            d_tok.advance();
+        } else {
+            break;
+        }
+    }
+}
+
+template <typename T, typename F>
+void Parser::read_kvpair(T& target, F&& consume) {
+    check_token<string_token>(d_tok.current());
+    string key = get<string_token>(d_tok.current()).value;
+
+    check_token<mapper_token>(d_tok.advance());
+    d_tok.advance();
+
+    consume(*this, target, key);
+}
+
+template <typename T, typename F>
+void Parser::read_elements(T& target, F&& consume) {
+    while(!match_token<end_sequence_token>(d_tok.current())) {
+        consume(*this, target);
+
+        if(match_token<separator_token>(d_tok.current())) {
+            d_tok.advance();
+        } else {
+            break;
+        }
+    }
+}
+
+template <typename T, typename Tok>
+T extract(const token& tok) {
+    istringstream istream(get<Tok>(tok).value);
+    T             target;
+    istream >> target;
+    return target;
+}
+
+template <typename T>
+enable_if_t<is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+    if(match_token<true_token>(tok)) {
+        return true;
+    } else if(match_token<false_token>(tok)) {
+        return false;
+    } else {
+        throw BadJson("expected either 'true' or 'false");
+    }
+}
+
+template <typename T>
+enable_if_t<is_floating_point_v<T>, T> read_actual_scalar(const token& tok) {
+    if(match_token<float_token>(tok)) {
+        return extract<T, float_token>(tok);
+    } else if(match_token<int_token>(tok)) {
+        return extract<T, int_token>(tok);
+    } else {
+        throw BadJson("unexpected token");
+    }
+}
+
+template <typename T>
+enable_if_t<is_integral_v<T> && !is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+    check_token<int_token>(tok);
+    return extract<T, int_token>(tok);
+}
+
+template <typename T>
+enable_if_t<is_same_v<string, T>, T> read_actual_scalar(const token& tok) {
+    check_token<string_token>(tok);
+    return get<string_token>(tok).value;
+}
+
+template <typename T>
+T Parser::read_scalar() {
+    T v = read_actual_scalar<T>(d_tok.current());
+    d_tok.advance();
+    return v;
+}
+
+template <typename T>
+optional<T> Parser::read_optional_scalar() {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return optional<T>{};
+    } else {
+        T v = read_actual_scalar<T>(d_tok.current());
+        d_tok.advance();
+        return v;
+    }
+}
+
+template <typename T, typename F>
+optional<T> Parser::read_optional_mapping(F&& consume) {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return optional<T>{};
+    } else {
+        return read_mapping<T>(forward<F>(consume));
+    }
+}
+
+template <typename T, typename F>
+optional<T> Parser::read_optional_sequence(F&& consumer) {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return optional<T>{};
+    } else {
+        return read_sequence<T>(forward<F>(consumer));
+    }
+}
+
+const int eof = char_traits<char>::eof();
+
+int non_ws(istream& str) noexcept {
     char c = 0;
     while(str.get(c)) {
         if(!isspace(c))
@@ -79,7 +292,7 @@ int non_ws(std::istream& str) noexcept {
     return eof;
 }
 
-void extract_literal(std::istream& input, std::string_view tail) {
+void extract_literal(istream& input, string_view tail) {
     for(char e : tail) {
         int c = input.get();
         if(c != e)
@@ -87,12 +300,12 @@ void extract_literal(std::istream& input, std::string_view tail) {
     }
 }
 
-token extract_number(std::istream& input, char head) noexcept {
+token extract_number(istream& input, char head) noexcept {
     bool is_float  = false;
     bool had_point = false;
     bool had_exp   = false;
 
-    std::string value;
+    string value;
     value += head;
 
     int c;
@@ -144,7 +357,7 @@ uint8_t single_decode(char h) noexcept {
     return 0;
 }
 
-std::string extract_utf8(std::istream& input) {
+string extract_utf8(istream& input) {
     char32_t wc = 0;
     for(size_t i = 0; i < 4; ++i) {
         int c = input.get();
@@ -158,7 +371,7 @@ std::string extract_utf8(std::istream& input) {
         wc |= single_decode((char)c);
     }
 
-    std::string value;
+    string value;
 
     char byte;
 
@@ -180,8 +393,8 @@ std::string extract_utf8(std::istream& input) {
     return value;
 }
 
-string_token extract_string(std::istream& input) {
-    std::string value;
+string_token extract_string(istream& input) {
+    string value;
 
     int c;
     while((c = input.get()) != eof && c != '"') {
@@ -225,39 +438,41 @@ string_token extract_string(std::istream& input) {
     return string_token{value};
 }
 
-bool peek(std::istream& stream, char expect) {
-    while(isspace(stream.peek())) {
-        stream.get();
-    }
-    return stream.peek() == expect;
-}
-
-token next_token(std::istream& input) {
-    int c = non_ws(input);
+const token& Tokenizer::advance() {
+    int c = non_ws(*d_stream);
     if(c != eof) {
         switch(c) {
         case '{':
-            return start_mapping_token{};
+            d_current = start_mapping_token{};
+            break;
         case '}':
-            return end_mapping_token{};
+            d_current = end_mapping_token{};
+            break;
         case '[':
-            return start_sequence_token{};
+            d_current = start_sequence_token{};
+            break;
         case ']':
-            return end_sequence_token{};
+            d_current = end_sequence_token{};
+            break;
         case ',':
-            return separator_token{};
+            d_current = separator_token{};
+            break;
         case ':':
-            return mapper_token{};
+            d_current = mapper_token{};
+            break;
 
         case 't':
-            extract_literal(input, "rue");
-            return true_token{};
+            extract_literal(*d_stream, "rue");
+            d_current = true_token{};
+            break;
         case 'f':
-            extract_literal(input, "alse");
-            return false_token{};
+            extract_literal(*d_stream, "alse");
+            d_current = false_token{};
+            break;
         case 'n':
-            extract_literal(input, "ull");
-            return null_token{};
+            extract_literal(*d_stream, "ull");
+            d_current = null_token{};
+            break;
 
         case '0':
         case '1':
@@ -271,162 +486,20 @@ token next_token(std::istream& input) {
         case '9':
         case '-':
         case '+':
-            return extract_number(input, c);
+            d_current = extract_number(*d_stream, c);
+            break;
 
         case '"':
-            return extract_string(input);
+            d_current = extract_string(*d_stream);
+            break;
 
         default:
             throw BadJson("unexpected token");
         }
-    }
-    return eof_token{};
-}
-
-template <typename T>
-void match_and_consume(std::istream& stream) {
-    auto t = next_token(stream);
-    check_token<T>(t);
-}
-
-template <typename T, typename F>
-void read_kvpair(std::istream& stream, token current, T& target, F&& consumer) {
-    check_token<string_token>(current);
-    std::string_view key = std::get<string_token>(current).value;
-
-    match_and_consume<mapper_token>(stream);
-    consumer(stream, target, key);
-}
-
-template <typename T, typename F>
-void read_members(std::istream& stream, T& target, F&& consumer) {
-    while(true) {
-        auto tok = next_token(stream);
-        if(match_token<string_token>(tok)) {
-            read_kvpair(stream, tok, target, std::forward<F>(consumer));
-            tok = next_token(stream);
-        }
-
-        if(match_token<end_mapping_token>(tok)) {
-            return;
-        } else if(!match_token<separator_token>(tok)) {
-            throw BadJson("unexpected token");
-        }
-    }
-}
-
-template <typename T, typename F>
-void read_elements(std::istream& stream, T& target, F&& consumer) {
-    while(!peek(stream, ']')) {
-        consumer(stream, target);
-        auto tok = next_token(stream);
-        if(match_token<end_sequence_token>(tok)) {
-            return;
-        }
-        check_token<separator_token>(tok);
-    }
-}
-
-template <typename T, typename F> // signature of F is expected to be void(std::istream& stream, T& target, std::string_view key);
-void read_mapping(std::istream& stream, T& target, F&& consumer) {
-    match_and_consume<start_mapping_token>(stream);
-    read_members(stream, target, std::forward<F>(consumer));
-}
-
-template <typename T, typename F> // signature of F is expected to be void(std::istream& stream, T& target);
-void read_sequence(std::istream& stream, T& target, F&& consumer) {
-    match_and_consume<start_sequence_token>(stream);
-    read_elements(stream, target, std::forward<F>(consumer));
-}
-
-template <typename T, typename Tok>
-T extract(const token& tok) {
-    std::istringstream istream(std::get<Tok>(tok).value);
-    T                  target;
-    istream >> target;
-    return target;
-}
-
-template <typename T>
-std::enable_if_t<std::is_same_v<bool, T>, T> read_actual_scalar(token tok) {
-    if(match_token<true_token>(tok)) {
-        return true;
-    } else if(match_token<false_token>(tok)) {
-        return false;
     } else {
-        throw BadJson("expected either 'true' or 'false");
+        d_current = eof_token{};
     }
-}
-
-template <typename T>
-std::enable_if_t<std::is_floating_point_v<T>, T> read_actual_scalar(token tok) {
-    if(match_token<float_token>(tok)) {
-        return extract<T, float_token>(tok);
-    } else if(match_token<int_token>(tok)) {
-        return extract<T, int_token>(tok);
-    } else {
-        throw BadJson("unexpected token");
-    }
-}
-
-template <typename T>
-std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<bool, T>, T> read_actual_scalar(token tok) {
-    check_token<int_token>(tok);
-    return extract<T, int_token>(tok);
-}
-
-template <typename T>
-std::enable_if_t<std::is_same_v<std::string, T>, T> read_actual_scalar(token tok) {
-    check_token<string_token>(tok);
-    return std::move(std::get<string_token>(tok).value);
-}
-
-template <typename T>
-T read_scalar(std::istream& stream) {
-    auto tok = next_token(stream);
-    return read_actual_scalar<T>(std::move(tok));
-}
-
-template <typename T>
-std::optional<T> read_optional_scalar(std::istream& stream) {
-    auto tok = next_token(stream);
-    if(match_token<null_token>(tok)) {
-        return std::optional<T>{};
-    } else {
-        return read_actual_scalar<T>(tok);
-    }
-}
-
-template <typename T, typename F>
-void read_optional_mapping(std::istream& stream, std::optional<T>& target, F&& consumer) {
-    auto tok = next_token(stream);
-    if(match_token<null_token>(tok)) {
-        target.reset();
-    } else {
-        check_token<start_mapping_token>(tok);
-
-        if(!target) {
-            target = T{};
-        }
-
-        read_members(stream, *target, std::forward<F>(consumer));
-    }
-}
-
-template <typename T, typename F>
-void read_optional_sequence(std::istream& stream, std::optional<T>& target, F&& consumer) {
-    auto tok = next_token(stream);
-    if(match_token<null_token>(tok)) {
-        target.reset();
-    } else {
-        check_token<start_sequence_token>(tok);
-
-        if(!target) {
-            target = T{};
-        }
-
-        read_elements(stream, *target, std::forward<F>(consumer));
-    }
+    return current();
 }
 
 } // namespace minijson
@@ -436,36 +509,38 @@ namespace {
 using namespace minijson;
 
 struct tokenizer_testcase {
-    std::string        input;
-    std::vector<token> tokens;
+    string        input;
+    vector<token> tokens;
 };
 
 class tokenizer_test : public testing::TestWithParam<tokenizer_testcase> {
 };
 
-std::string token_s(const token& t) {
-    return std::visit([&](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr(std::is_same_v<T, string_token>) {
+string token_s(const token& t) {
+    return visit([&](auto&& arg) {
+        using T = decay_t<decltype(arg)>;
+        if constexpr(is_same_v<T, string_token>) {
             return arg.value;
-        } else if constexpr(std::is_same_v<T, int_token>) {
+        } else if constexpr(is_same_v<T, int_token>) {
             return arg.value;
-        } else if constexpr(std::is_same_v<T, float_token>) {
+        } else if constexpr(is_same_v<T, float_token>) {
             return arg.value;
         } else {
-            return std::to_string(t.index());
+            return to_string(t.index());
         }
     },
-                      t);
+                 t);
 }
 
 TEST_P(tokenizer_test, tokens) {
     auto testcase = GetParam();
 
-    std::istringstream stream(testcase.input);
+    istringstream stream(testcase.input);
+    Tokenizer     tok(&stream);
 
     for(auto&& expected : testcase.tokens) {
-        token actual = next_token(stream);
+        token actual = tok.current();
+        tok.advance();
         EXPECT_EQ(token_s(expected), token_s(actual));
     }
 }
@@ -526,43 +601,58 @@ INSTANTIATE_TEST_SUITE_P(test_tokenizer,
                          testing::ValuesIn(tokenizer_testcases));
 
 TEST(tokenizer, invalid_utf8) {
-    std::stringstream stream("\"\\ug582\"");
-    EXPECT_THROW(next_token(stream), BadJson);
+    stringstream stream("\"\\ug582\"");
+    try {
+        Tokenizer tok(&stream);
+        FAIL();
+    } catch(const BadJson&) {
+        SUCCEED();
+    }
 }
 
 TEST(tokenizer, bad_literal) {
-    std::stringstream stream("trfalse");
-    EXPECT_THROW(next_token(stream), BadJson);
+    stringstream stream("trfalse");
+    try {
+        Tokenizer tok(&stream);
+        FAIL();
+    } catch(const BadJson&) {
+        SUCCEED();
+    }
 }
 
 TEST(tokenizer, bad_token) {
-    std::stringstream stream("!");
-    EXPECT_THROW(next_token(stream), BadJson);
+    stringstream stream("!");
+    try {
+        Tokenizer tok(&stream);
+        FAIL();
+    } catch(const BadJson&) {
+        SUCCEED();
+    }
 }
 
 struct Nested {
-    std::string value;
+    string value;
 };
 
 struct Struct {
-    double                          x{0.0};
-    double                          y{0.0};
-    int                             n{0};
-    bool                            b1{false};
-    bool                            b2{true};
-    std::string                     s;
-    std::vector<int>                v;
-    std::optional<int>              o1;
-    std::optional<int>              o2;
-    Nested                          nested;
-    std::optional<Nested>           o3;
-    std::optional<Nested>           o4;
-    std::optional<std::vector<int>> o5;
-    std::optional<std::vector<int>> o6;
+    double                x{0.0};
+    double                y{0.0};
+    int                   n{0};
+    bool                  b1{false};
+    bool                  b2{true};
+    string                s;
+    vector<int>           v;
+    optional<int>         o1;
+    optional<int>         o2;
+    Nested                nested;
+    optional<Nested>      o3;
+    optional<Nested>      o4;
+    optional<vector<int>> o5;
+    optional<vector<int>> o6;
 };
 
 TEST(parser, read_mapping) {
-    std::stringstream stream(R"(
+    stringstream stream(R"(
 {
     "x": 3.14,
     "y": 2.72,
@@ -583,78 +673,79 @@ TEST(parser, read_mapping) {
     "o5": null,
     "o6": [4, 5, 6]
 })");
-    Struct            p;
-    read_mapping(stream, p, [](std::istream& stream, Struct& target, std::string_view key) {
+    Parser       parser(&stream);
+    Struct       actual = parser.read_mapping<Struct>([](Parser& p, Struct& target, string_view key) {
         if(key == "x") {
-            target.x = read_scalar<double>(stream);
+            target.x = p.read_scalar<double>();
         } else if(key == "y") {
-            target.y = read_scalar<double>(stream);
+            target.y = p.read_scalar<double>();
         } else if(key == "n") {
-            target.n = read_scalar<int>(stream);
+            target.n = p.read_scalar<int>();
         } else if(key == "b1") {
-            target.b1 = read_scalar<bool>(stream);
+            target.b1 = p.read_scalar<bool>();
         } else if(key == "b2") {
-            target.b2 = read_scalar<bool>(stream);
+            target.b2 = p.read_scalar<bool>();
         } else if(key == "s") {
-            target.s = read_scalar<std::string>(stream);
+            target.s = p.read_scalar<string>();
         } else if(key == "v") {
-            read_sequence(stream, target.v, [&](std::istream& stream, std::vector<int>& v) {
-                v.push_back(read_scalar<int>(stream));
+            target.v = p.read_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
+                v.push_back(p2.read_scalar<int>());
             });
         } else if(key == "o1") {
-            target.o1 = read_optional_scalar<int>(stream);
+            target.o1 = p.read_optional_scalar<int>();
         } else if(key == "o2") {
-            target.o2 = read_optional_scalar<int>(stream);
+            target.o2 = p.read_optional_scalar<int>();
         } else if(key == "nested") {
-            read_mapping(stream, target.nested, [](std::istream& s, Nested& n, std::string_view k) {
+            target.nested = p.read_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = read_scalar<std::string>(s);
+                    n.value = p2.read_scalar<string>();
                 }
             });
         } else if(key == "o3") {
-            read_optional_mapping(stream, target.o3, [](std::istream& s, Nested& n, std::string_view k) {
+            target.o3 = p.read_optional_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = read_scalar<std::string>(s);
+                    n.value = p2.read_scalar<string>();
                 }
             });
         } else if(key == "o4") {
-            read_optional_mapping(stream, target.o4, [](std::istream& s, Nested& n, std::string_view k) {
+            target.o4 = p.read_optional_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = read_scalar<std::string>(s);
+                    n.value = p2.read_scalar<string>();
                 }
             });
         } else if(key == "o5") {
-            read_optional_sequence(stream, target.o5, [](std::istream& s, std::vector<int>& v) {
-                v.push_back(read_scalar<int>(s));
+            target.o5 = p.read_optional_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
+                v.push_back(p2.read_scalar<int>());
             });
         } else if(key == "o6") {
-            read_optional_sequence(stream, target.o6, [](std::istream& s, std::vector<int>& v) {
-                v.push_back(read_scalar<int>(s));
+            target.o6 = p.read_optional_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
+                v.push_back(p2.read_scalar<int>());
             });
         }
     });
-    match_and_consume<eof_token>(stream);
 
-    EXPECT_EQ(3.14, p.x);
-    EXPECT_EQ(2.72, p.y);
-    EXPECT_EQ(123, p.n);
-    EXPECT_TRUE(p.b1);
-    EXPECT_FALSE(p.b2);
-    EXPECT_EQ("abc", p.s);
+    EXPECT_TRUE(parser.is_eof());
 
-    std::vector<int> ve{1, 2, 3};
-    EXPECT_EQ(ve, p.v);
+    EXPECT_EQ(3.14, actual.x);
+    EXPECT_EQ(2.72, actual.y);
+    EXPECT_EQ(123, actual.n);
+    EXPECT_TRUE(actual.b1);
+    EXPECT_FALSE(actual.b2);
+    EXPECT_EQ("abc", actual.s);
 
-    EXPECT_EQ(std::optional<int>(), p.o1);
-    EXPECT_EQ(std::optional<int>(456), p.o2);
+    vector<int> ve{1, 2, 3};
+    EXPECT_EQ(ve, actual.v);
 
-    EXPECT_EQ("def", p.nested.value);
-    EXPECT_FALSE(p.o3);
-    EXPECT_EQ("abc", p.o4->value);
+    EXPECT_EQ(optional<int>(), actual.o1);
+    EXPECT_EQ(optional<int>(456), actual.o2);
 
-    EXPECT_FALSE(p.o5);
+    EXPECT_EQ("def", actual.nested.value);
+    EXPECT_FALSE(actual.o3);
+    EXPECT_EQ("abc", actual.o4->value);
+
+    EXPECT_FALSE(actual.o5);
     ve = {4, 5, 6};
-    EXPECT_EQ(ve, *p.o6);
+    EXPECT_EQ(ve, *actual.o6);
 }
 
 } // namespace
