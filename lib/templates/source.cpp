@@ -123,8 +123,14 @@ void to_json(ostream &out, const T &v) {
     using U = std::decay_t<T>;
     if constexpr (is_same_v<U, bool>) {
         out << boolalpha << v;
-    } else if constexpr (is_floating_point_v<T>) {
+    } else if constexpr (is_floating_point_v<U>) {
         out << setprecision(18) << v;
+    } else if constexpr (is_integral_v<U>) {
+        out << v;
+    } else if constexpr (is_same_v<U, string>) {
+        out << quoted(v);
+    } else {
+        assert(false && "implement me");
     }
 }
 

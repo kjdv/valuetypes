@@ -5,6 +5,7 @@ const std::string valuetypes::header = R"raw(
 
 #include <functional>
 #include <iosfwd>
+#include <string>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs

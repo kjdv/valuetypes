@@ -6,8 +6,14 @@
       "name": "truth",
       "type": "bool"
     }, {
+      "name": "n",
+      "type": "int"
+    }, {
       "name": "x",
       "type": "double"
+    }, {
+      "name": "s",
+      "type": "string"
     }]
   }]
 }
