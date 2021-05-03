@@ -19,6 +19,10 @@ Member make_double(string_view name, string_view default_value = "0.0") {
     return make_basic(name, "double", default_value);
 }
 
+Member make_bool(string_view name, string_view default_value = "false") {
+    return make_basic(name, "bool", default_value);
+}
+
 string_view extract(const composite::mapping& m, string_view key) {
     return m.at(string(key)).as<string>();
 }
@@ -26,9 +30,12 @@ string_view extract(const composite::mapping& m, string_view key) {
 Member from_composite(const composite::composite& n) {
     auto& m    = n.as<composite::mapping>();
     auto  type = extract(m, "type");
+    auto name = extract(m, "name");
 
-    if(type == "double") {
-        return make_double(extract(m, "name"));
+    if(type == "bool") {
+        return make_bool(name);
+    } else if(type == "double") {
+        return make_double(name);
     } else {
         throw BadDefinition("no such type");
     }

@@ -1,0 +1,13 @@
+{
+  "namespace": "bt",
+  "types": [{
+    "name": "BasicTypes",
+    "members": [{
+      "name": "truth",
+      "type": "bool"
+    }, {
+      "name": "x",
+      "type": "double"
+    }]
+  }]
+}

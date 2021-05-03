@@ -119,8 +119,13 @@ class Parser {
 } // namespace minijson
 
 template <typename T>
-void to_json(ostream &out, T v) {
-    out << setprecision(18) << v;
+void to_json(ostream &out, const T &v) {
+    using U = std::decay_t<T>;
+    if constexpr (is_same_v<U, bool>) {
+        out << boolalpha << v;
+    } else if constexpr (is_floating_point_v<T>) {
+        out << setprecision(18) << v;
+    }
 }
 
 template <typename T>
