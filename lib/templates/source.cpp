@@ -189,7 +189,7 @@ ostream &operator<<(ostream& out, const {{typedef.name }}& v) {
 }
 
 istream &operator>>(istream& in, {{ typedef.name }}& v) {
-    v = from_json(in);
+    from_json(in, v);
     return in;
 }
 
@@ -203,9 +203,9 @@ void to_json(std::ostream& out, const {{typedef.name }}& v) {
     out << " }";
 }
 
-{{ typedef.name }} from_json(istream& in) {
+void from_json(istream& in, {{ typedef.name }} &v) {
     minijson::Parser parser(&in);
-    return parser.read_mapping<{{ typedef.name }}>([](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
+    v = parser.read_mapping<{{ typedef.name }}>([](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
 ## for member in typedef.members
         {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
             target.{{member.name}} = from_json<{{member.type}}>(p);

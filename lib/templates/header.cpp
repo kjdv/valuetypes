@@ -28,7 +28,7 @@ std::ostream &operator<<(std::ostream& out, const {{ typedef.name }}& v);
 std::istream &operator>>(std::istream& in, {{ typedef.name }}& v);
 
 void to_json(std::ostream& out, const {{ typedef.name }}& v);
-{{ typedef.name }} from_json(std::istream& in);
+void from_json(std::istream& in, {{ typedef.name }} &v);
 
 ## endfor
 

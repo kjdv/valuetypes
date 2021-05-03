@@ -9,7 +9,7 @@ using namespace std;
 
 namespace {
 
-const unordered_set<string_view> int_like = {"int", "unsigned int"};
+const unordered_set<string_view> int_like = {"int", "unsigned int", "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t"};
 const unordered_set<string_view> float_like = {"float", "double", "unsigned float", "unsigned double"};
 
 bool is_int_like(string_view type) {

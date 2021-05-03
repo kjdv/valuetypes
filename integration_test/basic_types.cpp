@@ -2,6 +2,7 @@
 #include <basic_types/valuetypes.h>
 #include <rapidcheck/gtest.h>
 #include <sstream>
+#include <unordered_set>
 
 namespace bt {
 namespace {
@@ -24,6 +25,42 @@ TEST(BasicTypes, json) {
     auto expect = R"({ "truth": false, "n": 0, "x": 0, "s": "" })";
     EXPECT_EQ(expect, stream.str());
 }
+
+RC_GTEST_PROP(BasicTypes, hashing, (bool truth1, int n1, double x1, string s1, bool truth2, int n2, double x2, string s2)) {
+    BasicTypes bt1{truth1, n1, x1, move(s1)};
+    BasicTypes bt2{truth2, n2, x2, move(s2)};
+
+    auto h1 = std::hash<BasicTypes>{}(bt1);
+    auto h2 = std::hash<BasicTypes>{}(bt2);
+
+    if(bt1 == bt2) {
+        RC_ASSERT(h1 == h2);
+    } else {
+        // failure is unlikely but possible, how to assert for that?
+        RC_ASSERT(h1 != h2);
+    }
+}
+
+TEST(BasicTypes, hashIsUsableForContainers) {
+    BasicTypes bt1;
+    BasicTypes bt2{true, 123, 3.14, "abc"};
+
+    std::unordered_set<BasicTypes> s;
+
+    EXPECT_EQ(s.end(), s.find(bt1));
+    EXPECT_EQ(s.end(), s.find(bt2));
+
+    s.insert(bt1);
+
+    EXPECT_NE(s.end(), s.find(bt1));
+    EXPECT_EQ(s.end(), s.find(bt2));
+
+    s.insert(bt2);
+
+    EXPECT_NE(s.end(), s.find(bt1));
+    EXPECT_NE(s.end(), s.find(bt2));
+}
+
 
 RC_GTEST_PROP(BasicTypes, marshalling, (bool truth, int n, double x, string s)) {
     BasicTypes bt1{truth, n, x, move(s)};
