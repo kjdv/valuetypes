@@ -9,6 +9,7 @@ const std::string valuetypes::source = R"raw(#include "{{ options.base_filename 
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <cassert>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 
