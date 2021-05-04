@@ -184,17 +184,17 @@ bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
     return !(a < b);
 }
 
-ostream &operator<<(ostream& out, const {{typedef.name }}& v) {
+ostream &operator<<(ostream& out, const {{typedef.name }} &v) {
     to_json(out, v);
     return out;
 }
 
-istream &operator>>(istream& in, {{ typedef.name }}& v) {
+istream &operator>>(istream& in, {{ typedef.name }} &v) {
     from_json(in, v);
     return in;
 }
 
-void to_json(std::ostream& out, const {{typedef.name }}& v) {
+void to_json(std::ostream& out, const {{typedef.name }} &v) {
     out << "{ ";
 ## for member in typedef.members
     out << quoted("{{ member.name }}") << ": ";

@@ -6,13 +6,14 @@ const std::string valuetypes::header = R"raw(
 #include <functional>
 #include <iosfwd>
 #include <string>
+#include <cstdint>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs
 
 struct {{ typedef.name }} {
 ## for member in typedef.members
-    {{ member.type }} {{ member.name }}{% if member.default_value %}{ {{ member.default_value }} }{% endif %};
+    {{ member.type }} {{ member.name }}{% if member.default_value %} { {{ member.default_value }} }{% endif %};
 ## endfor
 };
 
@@ -24,10 +25,10 @@ bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
 bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 
-std::ostream &operator<<(std::ostream& out, const {{ typedef.name }}& v);
-std::istream &operator>>(std::istream& in, {{ typedef.name }}& v);
+std::ostream &operator<<(std::ostream& out, const {{ typedef.name }} &v);
+std::istream &operator>>(std::istream& in, {{ typedef.name }} &v);
 
-void to_json(std::ostream& out, const {{ typedef.name }}& v);
+void to_json(std::ostream& out, const {{ typedef.name }} &v);
 void from_json(std::istream& in, {{ typedef.name }} &v);
 
 ## endfor
