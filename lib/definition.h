@@ -17,6 +17,7 @@ struct Member {
     std::string                name;
     std::string                type;
     std::optional<std::string> default_value;
+    bool                       optional{false};
 };
 
 struct Definition {

@@ -1,6 +1,7 @@
 #include "templates.h"
 
 const std::string valuetypes::source = R"raw(#include "{{ options.base_filename }}.h"
+#include <cassert>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -9,7 +10,6 @@ const std::string valuetypes::source = R"raw(#include "{{ options.base_filename 
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <cassert>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 
@@ -130,6 +130,16 @@ class Parser {
 template <typename T>
 void to_json(ostream &out, const T &v) {
     using U = std::decay_t<T>;
+
+    if constexpr (is_optional_v<U>) {
+        if (!v) {
+            out << "null";
+        } else {
+            to_json(out, *v);
+        }
+        return;
+    }
+
     if constexpr (is_same_v<U, bool>) {
         out << boolalpha << v;
     } else if constexpr (is_floating_point_v<U>) {
@@ -153,15 +163,9 @@ T from_json(minijson::Parser &p) {
 ## for typedef in typedefs
 
 bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
-    return tie(
-## for member in typedef.members
-        a.{{ member.name }}{% if not loop.is_last %},{% endif %}
-## endfor
-    ) == tie(
-## for member in typedef.members
-        b.{{ member.name }}{% if not loop.is_last %},{% endif %}
-## endfor
-    );
+    return
+        tie({% for member in typedef.members %}a.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %}) ==
+        tie({% for member in typedef.members %}b.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
 }
 
 bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
@@ -169,15 +173,9 @@ bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
 }
 
 bool operator<(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
-    return tie(
-## for member in typedef.members
-        a.{{ member.name }}{% if not loop.is_last %},{% endif %}
-## endfor
-    ) < tie(
-## for member in typedef.members
-        b.{{ member.name }}{% if not loop.is_last %},{% endif %}
-## endfor
-    );
+    return
+        tie({% for member in typedef.members %}a.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %}) <
+        tie({% for member in typedef.members %}b.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
 }
 
 bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
@@ -190,16 +188,6 @@ bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept
 
 bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
     return !(a < b);
-}
-
-ostream &operator<<(ostream& out, const {{typedef.name }} &v) {
-    to_json(out, v);
-    return out;
-}
-
-istream &operator>>(istream& in, {{ typedef.name }} &v) {
-    from_json(in, v);
-    return in;
 }
 
 void to_json(std::ostream& out, const {{typedef.name }} &v) {
@@ -635,12 +623,18 @@ std::size_t hash_combine(const Head &head, Tail... tail) {
 } // anonymous namespace
 
 ## for typedef in typedefs
+ostream &operator<<(ostream& out, const {{typedef.namespace_name }} &v) {
+    {{ namespace }}::to_json(out, v);
+    return out;
+}
+
+istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
+    {{ namespace }}::from_json(in, v);
+    return in;
+}
+
 std::size_t hash<{{typedef.namespace_name}}>::operator()(const {{typedef.namespace_name}} &v) const noexcept {
-    return hash_combine(
-## for member in typedef.members
-        v.{{ member.name }}{% if not loop.is_last %},{% endif %}
-## endfor
-    );
+    return hash_combine({% for member in typedef.members %}v.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
 }
 
 ## endfor

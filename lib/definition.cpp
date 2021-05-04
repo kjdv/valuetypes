@@ -49,21 +49,33 @@ string_view extract(const composite::mapping& m, string_view key) {
 }
 
 Member from_composite(const composite::composite& n) {
-    auto& m    = n.as<composite::mapping>();
-    auto  type = extract(m, "type");
-    auto  name = extract(m, "name");
+    auto& m           = n.as<composite::mapping>();
+    auto  type        = extract(m, "type");
+    auto  name        = extract(m, "name");
+    bool  is_optional = [&] {
+        auto it = m.find("optional");
+        return it != m.end() && it->second.as<bool>();
+    }();
 
-    if(type == "bool") {
-        return make_bool(name);
-    } else if(auto it = int_like.find(type); it != int_like.end()) {
-        return make_int_like(name, it->second);
-    } else if(auto it = float_like.find(type); it != float_like.end()) {
-        return make_float_like(name, it->second);
-    } else if(type == "string") {
-        return Member{string(name), "std::string", optional<string>{}};
-    } else {
-        throw BadDefinition("no such type");
+    Member member = [&] {
+        if(type == "bool") {
+            return make_bool(name);
+        } else if(auto it = int_like.find(type); it != int_like.end()) {
+            return make_int_like(name, it->second);
+        } else if(auto it = float_like.find(type); it != float_like.end()) {
+            return make_float_like(name, it->second);
+        } else if(type == "string") {
+            return Member{string(name), "std::string", optional<string>{}};
+        } else {
+            throw BadDefinition("no such type");
+        }
+    }();
+    if(is_optional) {
+        member.optional = true;
+        member.default_value.reset(); // todo: nicify
     }
+
+    return member;
 }
 
 } // namespace

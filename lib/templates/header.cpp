@@ -3,10 +3,10 @@
 const std::string valuetypes::header = R"raw(
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <string>
-#include <cstdint>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs
@@ -25,9 +25,6 @@ bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcep
 bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 
-std::ostream &operator<<(std::ostream& out, const {{ typedef.name }} &v);
-std::istream &operator>>(std::istream& in, {{ typedef.name }} &v);
-
 void to_json(std::ostream& out, const {{ typedef.name }} &v);
 void from_json(std::istream& in, {{ typedef.name }} &v);
 
@@ -38,6 +35,10 @@ void from_json(std::istream& in, {{ typedef.name }} &v);
 namespace std {
 
 ## for typedef in typedefs
+
+ostream &operator<<(ostream& out, const {{ typedef.namespace_name }} &v);
+istream &operator>>(istream& in, {{ typedef.namespace_name }} &v);
+
 template<>
 struct hash<{{typedef.namespace_name}}> {
     std::size_t operator()(const {{typedef.namespace_name}} &v) const noexcept;

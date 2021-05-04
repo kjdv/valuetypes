@@ -17,12 +17,10 @@ using namespace std;
 
 // this does not need to be in the minijson namespace:
 template <typename T>
-struct is_optional: false_type
-{};
+struct is_optional : false_type {};
 
 template <typename T>
-struct is_optional<optional<T>>: true_type
-{};
+struct is_optional<optional<T>> : true_type {};
 
 template <typename T>
 constexpr bool is_optional_v = is_optional<T>::value;
@@ -156,7 +154,7 @@ enable_if_t<!is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
 
 template <typename T, typename F>
 enable_if_t<is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
-    if (match_token<null_token>(d_tok.current())) {
+    if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
         return T{};
     } else {
@@ -180,7 +178,7 @@ enable_if_t<!is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
 
 template <typename T, typename F>
 enable_if_t<is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
-    if (match_token<null_token>(d_tok.current())) {
+    if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
         return T{};
     } else {

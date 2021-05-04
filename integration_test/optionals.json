@@ -1,0 +1,23 @@
+{
+  "namespace": "opts",
+  "types": [{
+    "name": "Optionals",
+    "members": [{
+      "name": "b",
+      "type": "bool",
+      "optional": true
+    }, {
+      "name": "n",
+      "type": "int",
+      "optional": true
+    }, {
+      "name": "x",
+      "type": "double",
+      "optional": true
+    }, {
+      "name": "s",
+      "type": "string",
+      "optional": true
+    }]
+  }]
+}

@@ -30,7 +30,7 @@ void write(const fs::path& p, string_view content) {
 json member_to_json(const Member m) {
     json d;
     d["name"] = m.name;
-    d["type"] = m.type;
+    d["type"] = m.optional ? string("std::optional<") + m.type + ">" : m.type;
 
     if(m.default_value) {
         d["default_value"] = *m.default_value;

@@ -14,10 +14,11 @@ endfunction()
 
 generate_value_type(point)
 generate_value_type(basic_types)
+generate_value_type(optionals)
 
 file(GLOB sources *.h *.cpp)
 
 add_executable(integration_test ${sources})
-target_link_libraries(integration_test point basic_types ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
+target_link_libraries(integration_test point basic_types optionals ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
 
 gtest_discover_tests(integration_test)
