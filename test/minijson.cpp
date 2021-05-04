@@ -15,7 +15,19 @@ using namespace std;
 //      part of generated code (duplication)
 //      For now: dirty and practical: develop here and copy-paste into generated source
 
-namespace minijson { // declerations
+// this does not need to be in the minijson namespace:
+template <typename T>
+struct is_optional: false_type
+{};
+
+template <typename T>
+struct is_optional<optional<T>>: true_type
+{};
+
+template <typename T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+namespace minijson { // declarations
 
 class BadJson : public runtime_error {
   public:
@@ -83,22 +95,19 @@ class Parser {
       : d_tok(stream) {}
 
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
-    T read_mapping(F&& consume);
-
-    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
-    T read_sequence(F&& consume);
-
-    template <typename T>
-    T read_scalar();
-
+    enable_if_t<!is_optional_v<T>, T> read_mapping(F&& consume);
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
-    optional<T> read_optional_mapping(F&& consume);
+    enable_if_t<is_optional_v<T>, T> read_mapping(F&& consume);
 
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
-    optional<T> read_optional_sequence(F&& consume);
+    enable_if_t<!is_optional_v<T>, T> read_sequence(F&& consume);
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
+    enable_if_t<is_optional_v<T>, T> read_sequence(F&& consume);
 
     template <typename T>
-    optional<T> read_optional_scalar();
+    enable_if_t<!is_optional_v<T>, T> read_scalar();
+    template <typename T>
+    enable_if_t<is_optional_v<T>, T> read_scalar();
 
     bool is_eof() const noexcept;
 
@@ -132,7 +141,7 @@ void check_token(const token& t) {
 }
 
 template <typename T, typename F>
-T Parser::read_mapping(F&& consume) {
+enable_if_t<!is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
     check_token<start_mapping_token>(d_tok.current());
     d_tok.advance();
 
@@ -146,7 +155,17 @@ T Parser::read_mapping(F&& consume) {
 }
 
 template <typename T, typename F>
-T Parser::read_sequence(F&& consume) {
+enable_if_t<is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
+    if (match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return T{};
+    } else {
+        return read_mapping<typename T::value_type>(forward<F>(consume));
+    }
+}
+
+template <typename T, typename F>
+enable_if_t<!is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
     check_token<start_sequence_token>(d_tok.current());
     d_tok.advance();
 
@@ -157,6 +176,16 @@ T Parser::read_sequence(F&& consume) {
     d_tok.advance();
 
     return target;
+}
+
+template <typename T, typename F>
+enable_if_t<is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
+    if (match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return T{};
+    } else {
+        return read_sequence<typename T::value_type>(forward<F>(consume));
+    }
 }
 
 bool Parser::is_eof() const noexcept {
@@ -243,41 +272,19 @@ enable_if_t<is_same_v<string, T>, T> read_actual_scalar(const token& tok) {
 }
 
 template <typename T>
-T Parser::read_scalar() {
+enable_if_t<!is_optional_v<T>, T> Parser::read_scalar() {
     T v = read_actual_scalar<T>(d_tok.current());
     d_tok.advance();
     return v;
 }
 
 template <typename T>
-optional<T> Parser::read_optional_scalar() {
+enable_if_t<is_optional_v<T>, T> Parser::read_scalar() {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
-        return optional<T>{};
+        return T{};
     } else {
-        T v = read_actual_scalar<T>(d_tok.current());
-        d_tok.advance();
-        return v;
-    }
-}
-
-template <typename T, typename F>
-optional<T> Parser::read_optional_mapping(F&& consume) {
-    if(match_token<null_token>(d_tok.current())) {
-        d_tok.advance();
-        return optional<T>{};
-    } else {
-        return read_mapping<T>(forward<F>(consume));
-    }
-}
-
-template <typename T, typename F>
-optional<T> Parser::read_optional_sequence(F&& consumer) {
-    if(match_token<null_token>(d_tok.current())) {
-        d_tok.advance();
-        return optional<T>{};
-    } else {
-        return read_sequence<T>(forward<F>(consumer));
+        return read_scalar<typename T::value_type>();
     }
 }
 
@@ -692,9 +699,9 @@ TEST(parser, read_mapping) {
                 v.push_back(p2.read_scalar<int>());
             });
         } else if(key == "o1") {
-            target.o1 = p.read_optional_scalar<int>();
+            target.o1 = p.read_scalar<optional<int>>();
         } else if(key == "o2") {
-            target.o2 = p.read_optional_scalar<int>();
+            target.o2 = p.read_scalar<optional<int>>();
         } else if(key == "nested") {
             target.nested = p.read_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
@@ -702,23 +709,23 @@ TEST(parser, read_mapping) {
                 }
             });
         } else if(key == "o3") {
-            target.o3 = p.read_optional_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
+            target.o3 = p.read_mapping<optional<Nested>>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
                     n.value = p2.read_scalar<string>();
                 }
             });
         } else if(key == "o4") {
-            target.o4 = p.read_optional_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
+            target.o4 = p.read_mapping<optional<Nested>>([](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
                     n.value = p2.read_scalar<string>();
                 }
             });
         } else if(key == "o5") {
-            target.o5 = p.read_optional_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
+            target.o5 = p.read_sequence<optional<vector<int>>>([](Parser& p2, vector<int>& v) {
                 v.push_back(p2.read_scalar<int>());
             });
         } else if(key == "o6") {
-            target.o6 = p.read_optional_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
+            target.o6 = p.read_sequence<optional<vector<int>>>([](Parser& p2, vector<int>& v) {
                 v.push_back(p2.read_scalar<int>());
             });
         }
