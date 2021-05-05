@@ -22,9 +22,9 @@ fs::path output_file(const fs::path& dir, const fs::path& base_filename, string_
     return cp;
 }
 
-void write(const fs::path& p, string_view content) {
+void render(const fs::path& p, string_view tmpl, const json &data) {
     ofstream file(p);
-    file << content;
+    inja::render_to(file, tmpl, data);
 }
 
 json member_to_json(const Member m) {
@@ -95,8 +95,8 @@ void render(const DefinitionStore& ds, const options& opts) {
     json data       = defstore_to_json(ds);
     data["options"] = opts_to_json(opts);
 
-    write(header_filename, inja::render(header, data));
-    write(source_filename, inja::render(source, data));
+    render(header_filename, header, data);
+    render(source_filename, source, data);
 }
 
 } // namespace valuetypes
