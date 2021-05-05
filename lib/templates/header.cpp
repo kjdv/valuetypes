@@ -1,12 +1,12 @@
 #include "templates.h"
 
-const std::string valuetypes::header = R"raw(
-#pragma once
+const std::string valuetypes::header = R"raw(#pragma once
 
 #include <cstdint>
 #include <functional>
 #include <iosfwd>
 #include <string>
+#include <optional>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs
@@ -35,7 +35,6 @@ void from_json(std::istream& in, {{ typedef.name }} &v);
 namespace std {
 
 ## for typedef in typedefs
-
 ostream &operator<<(ostream& out, const {{ typedef.namespace_name }} &v);
 istream &operator>>(istream& in, {{ typedef.namespace_name }} &v);
 

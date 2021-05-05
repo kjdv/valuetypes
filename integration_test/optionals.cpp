@@ -4,7 +4,7 @@
 #include <sstream>
 #include <unordered_set>
 
-namespace opts {
+namespace vt {
 namespace {
 
 using namespace std;
