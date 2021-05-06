@@ -1,3 +1,5 @@
+// start minijson_declarations.cpp.inja
+
 namespace minijson { // declarations
 
 class BadJson : public std::runtime_error {
@@ -92,3 +94,5 @@ class Parser {
 };
 
 } // namespace minijson
+
+// end minijson_declarations.cpp.inja

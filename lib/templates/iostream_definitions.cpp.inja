@@ -1,0 +1,87 @@
+// start iostream_definitions.cpp.inja
+
+{% if namespace %}namespace {{ namespace }} { {% endif %}
+namespace {
+
+{% include "minijson_declarations" %}
+
+template <typename T>
+void to_json(ostream &out, const T &v) {
+    using U = std::decay_t<T>;
+
+    if constexpr (is_optional_v<U>) {
+        if (!v) {
+            out << "null";
+        } else {
+            to_json(out, *v);
+        }
+        return;
+    }
+
+    if constexpr (is_same_v<U, bool>) {
+        out << boolalpha << v;
+    } else if constexpr (is_floating_point_v<U>) {
+        out << setprecision(18) << v;
+    } else if constexpr (is_integral_v<U>) {
+        out << v;
+    } else if constexpr (is_same_v<U, string>) {
+        out << quoted(v);
+    } else {
+        assert(false && "implement me");
+    }
+}
+
+template <typename T>
+T from_json(minijson::Parser &p) {
+    return p.read_scalar<T>();
+}
+
+} // anonymous namespace
+
+## for typedef in typedefs
+void to_json(std::ostream& out, const {{typedef.name }} &v) {
+    out << "{ ";
+## for member in typedef.members
+    out << quoted("{{ member.name }}") << ": ";
+    to_json(out, v.{{member.name}});
+{% if not loop.is_last %}    out << ", ";{% endif %}
+## endfor
+    out << " }";
+}
+
+void from_json(istream& in, {{ typedef.name }} &v) {
+    minijson::Parser parser(&in);
+    v = parser.read_mapping<{{ typedef.name }}>([](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
+## for member in typedef.members
+        {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
+            target.{{member.name}} = from_json<{{member.type}}>(p);
+        }
+## endfor
+    });
+}
+## endfor
+} // {% if namespace %}namespace {{ namespace }}{% endif %}
+
+namespace std {
+
+## for typedef in typedefs
+ostream &operator<<(ostream& out, const {{typedef.namespace_name }} &v) {
+    {{ namespace }}::to_json(out, v);
+    return out;
+}
+
+istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
+    {{ namespace }}::from_json(in, v);
+    return in;
+}
+
+## endfor
+} // namespace std
+
+{% if namespace %}namespace {{ namespace }} { {% endif %}
+namespace {
+{% include "minijson_definitions" %}
+} // anonymous namespace
+} // {% if namespace %}namespace {{ namespace }}{% endif %}
+
+// end iostream_definitions.cpp.inja

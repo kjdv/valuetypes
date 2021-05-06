@@ -14,6 +14,9 @@ inja::Environment make_env();
 std::string_view hash_declarations() noexcept;
 std::string_view hash_definitions() noexcept;
 
+std::string_view iostream_declarations() noexcept;
+std::string_view iostream_definitions() noexcept;
+
 std::string_view minijson_declarations() noexcept;
 std::string_view minijson_definitions() noexcept;
 

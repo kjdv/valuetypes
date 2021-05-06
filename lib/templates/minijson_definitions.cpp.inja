@@ -1,3 +1,5 @@
+// start minijson_definitions.cpp.inja
+
 namespace minijson { // definitions
 
 template <typename T>
@@ -388,3 +390,5 @@ const token& Tokenizer::advance() {
 }
 
 } // namespace minijson
+
+// end minijson_definitions.cpp.inja

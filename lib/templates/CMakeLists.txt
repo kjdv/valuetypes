@@ -5,6 +5,8 @@ set(template_sources
     ${CMAKE_CURRENT_BINARY_DIR}/source.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_definitions.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/iostream_declarations.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/iostream_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/minijson_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/minijson_definitions.cpp
 )
@@ -18,6 +20,8 @@ generate_template(header)
 generate_template(source)
 generate_template(hash_declarations)
 generate_template(hash_definitions)
+generate_template(iostream_declarations)
+generate_template(iostream_definitions)
 generate_template(minijson_declarations)
 generate_template(minijson_definitions)
 

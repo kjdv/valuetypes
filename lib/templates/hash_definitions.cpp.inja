@@ -1,3 +1,5 @@
+// start hash_definitions.cpp.inja
+
 namespace std {
 
 namespace {
@@ -17,19 +19,11 @@ std::size_t hash_combine(const Head &head, Tail... tail) {
 } // anonymous namespace
 
 ## for typedef in typedefs
-ostream &operator<<(ostream& out, const {{typedef.namespace_name }} &v) {
-    {{ namespace }}::to_json(out, v);
-    return out;
-}
-
-istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
-    {{ namespace }}::from_json(in, v);
-    return in;
-}
-
 std::size_t hash<{{typedef.namespace_name}}>::operator()(const {{typedef.namespace_name}} &v) const noexcept {
     return hash_combine({% for member in typedef.members %}v.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
 }
 
 ## endfor
 } // namespace std
+
+// end hash_definitions.cpp.inja

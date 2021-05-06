@@ -1,0 +1,18 @@
+{% if namespace %}namespace {{ namespace }} { {% endif %}
+
+## for typedef in typedefs
+void to_json(std::ostream& out, const {{ typedef.name }} &v);
+void from_json(std::istream& in, {{ typedef.name }} &v);
+
+## endfor
+
+{% if namespace %}} // namespace {{ namespace }}{% endif %}
+
+namespace std {
+
+## for typedef in typedefs
+ostream &operator<<(ostream& out, const {{ typedef.namespace_name }} &v);
+istream &operator>>(istream& in, {{ typedef.namespace_name }} &v);
+
+## endfor
+} // namespace std
