@@ -5,6 +5,8 @@ set(template_sources
     ${CMAKE_CURRENT_BINARY_DIR}/source.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/comparison_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/comparison_definitions.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/equality_declarations.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/equality_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/iostream_declarations.cpp
@@ -20,6 +22,8 @@ endfunction()
 
 generate_template(header)
 generate_template(source)
+generate_template(equality_declarations)
+generate_template(equality_definitions)
 generate_template(comparison_declarations)
 generate_template(comparison_definitions)
 generate_template(hash_declarations)

@@ -28,19 +28,7 @@ constexpr bool is_optional_v = is_optional<T>::value;
 
 } // anonymous namespace
 
-## for typedef in typedefs
-
-bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
-    return
-        tie({% for member in typedef.members %}a.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %}) ==
-        tie({% for member in typedef.members %}b.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
-}
-
-bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept {
-    return !(a == b);
-}
-## endfor
-
+{% include "equality_definitions" %}
 {% include "comparison_definitions" %}
 
 } // {% if namespace %}} // namespace {{ namespace }}{% endif %}
