@@ -1,3 +1,5 @@
+add_subdirectory(templates)
+
 file(GLOB sources *.h *.cpp templates/*.h templates/*.cpp)
 
 add_library(valuetypes_common
@@ -11,6 +13,6 @@ target_include_directories(valuetypes_common
 
 
 target_link_libraries(valuetypes_common
-    PUBLIC pantor::inja Kjson::kjson
+    PUBLIC templates pantor::inja Kjson::kjson
 )
 

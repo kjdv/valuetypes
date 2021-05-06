@@ -1,6 +1,4 @@
-#include "templates.h"
-
-const std::string valuetypes::source = R"raw(#include "{{ options.base_filename }}.h"
+#include "{{ options.base_filename }}.h"
 #include <cassert>
 #include <iomanip>
 #include <iostream>
@@ -639,4 +637,3 @@ std::size_t hash<{{typedef.namespace_name}}>::operator()(const {{typedef.namespa
 
 ## endfor
 } // namespace std
-)raw";

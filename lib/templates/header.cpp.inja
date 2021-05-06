@@ -1,6 +1,4 @@
-#include "templates.h"
-
-const std::string valuetypes::header = R"raw(#pragma once
+#pragma once
 
 #include <cstdint>
 #include <functional>
@@ -45,4 +43,3 @@ struct hash<{{typedef.namespace_name}}> {
 
 ## endfor
 } // namespace std
-)raw";

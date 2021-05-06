@@ -91,4 +91,4 @@ RC_GTEST_PROP(BasicTypes, marshalling, (bool b, int n, double x, string s, int c
 }
 
 } // namespace
-} // namespace opts
+} // namespace vt

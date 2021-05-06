@@ -1,10 +1,12 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 
 namespace valuetypes {
+namespace templates {
 
-extern const std::string header;
-extern const std::string source;
+std::string_view header() noexcept;
+std::string_view source() noexcept;
 
+} // namespace templates
 } // namespace valuetypes
