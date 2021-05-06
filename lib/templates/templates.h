@@ -11,5 +11,8 @@ std::string_view source() noexcept;
 
 inja::Environment make_env();
 
+std::string_view minijson_declarations() noexcept;
+std::string_view minijson_definitions() noexcept;
+
 } // namespace templates
 } // namespace valuetypes

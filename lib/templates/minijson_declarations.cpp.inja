@@ -1,0 +1,94 @@
+namespace minijson { // declarations
+
+class BadJson : public std::runtime_error {
+  public:
+    using std::runtime_error::runtime_error;
+};
+
+// tokens
+struct start_mapping_token {};
+struct end_mapping_token {};
+struct start_sequence_token {};
+struct end_sequence_token {};
+struct separator_token {};
+struct mapper_token {};
+struct string_token {
+    std::string value;
+};
+struct int_token {
+    std::string value;
+};
+struct float_token {
+    std::string value;
+};
+struct true_token {};
+struct false_token {};
+struct null_token {};
+struct eof_token {};
+
+using token = std::variant<
+    start_mapping_token,
+    end_mapping_token,
+    start_sequence_token,
+    end_sequence_token,
+    separator_token,
+    mapper_token,
+    string_token,
+    int_token,
+    float_token,
+    true_token,
+    false_token,
+    null_token,
+    eof_token>;
+
+class Tokenizer {
+  public:
+    Tokenizer(std::istream* stream);
+
+    const token& advance();
+
+    const token& current() const noexcept {
+        return d_current;
+    }
+
+  private:
+    std::istream* d_stream;
+    token    d_current;
+};
+
+class Parser {
+  public:
+    Parser(std::istream* stream)
+      : d_tok(stream) {}
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
+    std::enable_if_t<!is_optional_v<T>, T> read_mapping(F&& consume);
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
+    std::enable_if_t<is_optional_v<T>, T> read_mapping(F&& consume);
+
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
+    std::enable_if_t<!is_optional_v<T>, T> read_sequence(F&& consume);
+    template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
+    std::enable_if_t<is_optional_v<T>, T> read_sequence(F&& consume);
+
+    template <typename T>
+    std::enable_if_t<!is_optional_v<T>, T> read_scalar();
+    template <typename T>
+    std::enable_if_t<is_optional_v<T>, T> read_scalar();
+
+    bool is_eof() const noexcept;
+
+  private:
+    template <typename T, typename F>
+    void read_members(T& target, F&& consume);
+
+    template <typename T, typename F>
+    void read_kvpair(T& target, F&& consume);
+
+    template <typename T, typename F>
+    void read_elements(T& target, F&& consume);
+
+    Tokenizer d_tok;
+};
+
+} // namespace minijson

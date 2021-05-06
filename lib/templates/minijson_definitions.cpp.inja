@@ -1,0 +1,390 @@
+namespace minijson { // definitions
+
+template <typename T>
+constexpr bool match_token(const token& t) noexcept {
+    return holds_alternative<T>(t);
+}
+
+template <typename T>
+void check_token(const token& t) {
+    if(!match_token<T>(t)) {
+        throw BadJson("unexpected token");
+    }
+}
+
+Tokenizer::Tokenizer(istream* stream)
+    : d_stream(stream) {
+    assert(d_stream);
+    advance();
+}
+
+template <typename T, typename F>
+enable_if_t<!is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
+    check_token<start_mapping_token>(d_tok.current());
+    d_tok.advance();
+
+    T target{};
+    read_members(target, forward<F>(consume));
+
+    check_token<end_mapping_token>(d_tok.current());
+    d_tok.advance();
+
+    return target;
+}
+
+template <typename T, typename F>
+enable_if_t<is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return T{};
+    } else {
+        return read_mapping<typename T::value_type>(forward<F>(consume));
+    }
+}
+
+template <typename T, typename F>
+enable_if_t<!is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
+    check_token<start_sequence_token>(d_tok.current());
+    d_tok.advance();
+
+    T target{};
+    read_elements(target, forward<F>(consume));
+
+    check_token<end_sequence_token>(d_tok.current());
+    d_tok.advance();
+
+    return target;
+}
+
+template <typename T, typename F>
+enable_if_t<is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return T{};
+    } else {
+        return read_sequence<typename T::value_type>(forward<F>(consume));
+    }
+}
+
+bool Parser::is_eof() const noexcept {
+    return match_token<eof_token>(d_tok.current());
+}
+
+template <typename T, typename F>
+void Parser::read_members(T& target, F&& consume) {
+    while(match_token<string_token>(d_tok.current())) {
+        read_kvpair(target, forward<F>(consume));
+
+        if(match_token<separator_token>(d_tok.current())) {
+            d_tok.advance();
+        } else {
+            break;
+        }
+    }
+}
+
+template <typename T, typename F>
+void Parser::read_kvpair(T& target, F&& consume) {
+    check_token<string_token>(d_tok.current());
+    string key = get<string_token>(d_tok.current()).value;
+
+    check_token<mapper_token>(d_tok.advance());
+    d_tok.advance();
+
+    consume(*this, target, key);
+}
+
+template <typename T, typename F>
+void Parser::read_elements(T& target, F&& consume) {
+    while(!match_token<end_sequence_token>(d_tok.current())) {
+        consume(*this, target);
+
+        if(match_token<separator_token>(d_tok.current())) {
+            d_tok.advance();
+        } else {
+            break;
+        }
+    }
+}
+
+template <typename T, typename Tok>
+T extract(const token& tok) {
+    istringstream istream(get<Tok>(tok).value);
+    T             target;
+    istream >> target;
+    return target;
+}
+
+template <typename T>
+enable_if_t<is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+    if(match_token<true_token>(tok)) {
+        return true;
+    } else if(match_token<false_token>(tok)) {
+        return false;
+    } else {
+        throw BadJson("expected either 'true' or 'false");
+    }
+}
+
+template <typename T>
+enable_if_t<is_floating_point_v<T>, T> read_actual_scalar(const token& tok) {
+    if(match_token<float_token>(tok)) {
+        return extract<T, float_token>(tok);
+    } else if(match_token<int_token>(tok)) {
+        return extract<T, int_token>(tok);
+    } else {
+        throw BadJson("unexpected token");
+    }
+}
+
+template <typename T>
+enable_if_t<is_integral_v<T> && !is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+    check_token<int_token>(tok);
+    return extract<T, int_token>(tok);
+}
+
+template <typename T>
+enable_if_t<is_same_v<string, T>, T> read_actual_scalar(const token& tok) {
+    check_token<string_token>(tok);
+    return get<string_token>(tok).value;
+}
+
+template <typename T>
+enable_if_t<!is_optional_v<T>, T> Parser::read_scalar() {
+    T v = read_actual_scalar<T>(d_tok.current());
+    d_tok.advance();
+    return v;
+}
+
+template <typename T>
+enable_if_t<is_optional_v<T>, T> Parser::read_scalar() {
+    if(match_token<null_token>(d_tok.current())) {
+        d_tok.advance();
+        return T{};
+    } else {
+        return read_scalar<typename T::value_type>();
+    }
+}
+
+const int eof = char_traits<char>::eof();
+
+int non_ws(istream& str) noexcept {
+    char c = 0;
+    while(str.get(c)) {
+        if(!isspace(c))
+            return c;
+    }
+    return eof;
+}
+
+void extract_literal(istream& input, string_view tail) {
+    for(char e : tail) {
+        int c = input.get();
+        if(c != e)
+            throw BadJson("unexpected char in literal");
+    }
+}
+
+token extract_number(istream& input, char head) noexcept {
+    bool is_float  = false;
+    bool had_point = false;
+    bool had_exp   = false;
+
+    string value;
+    value += head;
+
+    int c;
+    while((c = input.peek()) != eof) {
+        if(c >= '0' && c <= '9') {
+            input.get();
+            value += c;
+        } else if(!had_point && c == '.') {
+            input.get();
+            value += c;
+            is_float  = true;
+            had_point = true;
+        } else if(!had_exp && (c == 'e' || c == 'E')) {
+            input.get();
+            value += c;
+
+            if(input.peek() == '+' || input.peek() == '-') {
+                c = input.get();
+                value += c;
+            }
+            is_float = true;
+            had_exp  = true;
+        } else
+            break;
+    }
+
+    if(is_float) {
+        return float_token{value};
+    } else {
+        return int_token{value};
+    }
+}
+
+bool is_hex(char c) noexcept {
+    return (c >= '0' && c <= '9') ||
+           (c >= 'a' && c <= 'f') ||
+           (c >= 'A' && c <= 'F');
+}
+
+uint8_t single_decode(char h) noexcept {
+    if(h >= '0' && h <= '9')
+        return h - '0';
+    else if(h >= 'a' && h <= 'f')
+        return h - 'a' + 10;
+    else if(h >= 'A' && h <= 'F')
+        return h - 'A' + 10;
+
+    assert(false);
+    return 0;
+}
+
+string extract_utf8(istream& input) {
+    char32_t wc = 0;
+    for(size_t i = 0; i < 4; ++i) {
+        int c = input.get();
+        if(c == eof)
+            break;
+
+        if(!is_hex(c))
+            throw BadJson("expected hex digit");
+
+        wc <<= 4;
+        wc |= single_decode((char)c);
+    }
+
+    string value;
+
+    char byte;
+
+    byte = wc >> 24;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 16;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 8;
+    if(byte)
+        value += byte;
+
+    byte = wc & 0xff;
+    value += byte;
+
+    return value;
+}
+
+string_token extract_string(istream& input) {
+    string value;
+
+    int c;
+    while((c = input.get()) != eof && c != '"') {
+        if(c == '\\') {
+            c = input.get();
+            switch(c) {
+            case '/':
+            case '\\':
+            case '"':
+                value += c;
+                break;
+
+            case 'b':
+                value += '\b';
+                break;
+            case 'f':
+                value += '\f';
+                break;
+            case 'n':
+                value += '\n';
+                break;
+            case 'r':
+                value += '\r';
+                break;
+            case 't':
+                value += '\t';
+                break;
+
+            case 'u':
+                value += extract_utf8(input);
+                break;
+
+            default:
+                value += c;
+                break;
+            }
+        } else
+            value += c;
+    }
+
+    return string_token{value};
+}
+
+const token& Tokenizer::advance() {
+    int c = non_ws(*d_stream);
+    if(c != eof) {
+        switch(c) {
+        case '{':
+            d_current = start_mapping_token{};
+            break;
+        case '}':
+            d_current = end_mapping_token{};
+            break;
+        case '[':
+            d_current = start_sequence_token{};
+            break;
+        case ']':
+            d_current = end_sequence_token{};
+            break;
+        case ',':
+            d_current = separator_token{};
+            break;
+        case ':':
+            d_current = mapper_token{};
+            break;
+
+        case 't':
+            extract_literal(*d_stream, "rue");
+            d_current = true_token{};
+            break;
+        case 'f':
+            extract_literal(*d_stream, "alse");
+            d_current = false_token{};
+            break;
+        case 'n':
+            extract_literal(*d_stream, "ull");
+            d_current = null_token{};
+            break;
+
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case '-':
+        case '+':
+            d_current = extract_number(*d_stream, c);
+            break;
+
+        case '"':
+            d_current = extract_string(*d_stream);
+            break;
+
+        default:
+            throw BadJson("unexpected token");
+        }
+    } else {
+        d_current = eof_token{};
+    }
+    return current();
+}
+
+} // namespace minijson

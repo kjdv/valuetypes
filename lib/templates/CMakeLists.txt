@@ -1,4 +1,11 @@
-set(template_sources templates.h templates.cpp header.cpp source.cpp)
+set(template_sources 
+    templates.h 
+    templates.cpp 
+    ${CMAKE_CURRENT_BINARY_DIR}/header.cpp 
+    ${CMAKE_CURRENT_BINARY_DIR}/source.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/minijson_declarations.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/minijson_definitions.cpp
+)
 
 function(generate_template name)
     file(READ ${name}.cpp.inja content)
@@ -7,8 +14,8 @@ endfunction()
 
 generate_template(header)
 generate_template(source)
-
-message(FATAL ${template_sources})
+generate_template(minijson_declarations)
+generate_template(minijson_definitions)
 
 add_library(templates ${template_sources})
 target_include_directories(templates
