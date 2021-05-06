@@ -33,12 +33,12 @@ void to_json(ostream &out, const T &v) {
 
 template <typename T>
 void from_json(minijson::Parser &p, T &v) {
-    v = p.read_scalar<T>();
+    p.read_scalar<T>(v);
 }
 
 ## for typedef in typedefs
 void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
-    v = p.read_mapping<{{ typedef.name }}>([](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
+    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
 ## for member in typedef.members
         {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
              from_json(p, target.{{member.name}});

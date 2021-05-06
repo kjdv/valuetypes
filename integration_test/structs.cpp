@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include <structs/valuetypes.h>
 #include <rapidcheck/gtest.h>
+#include <structs/valuetypes.h>
 #include <unordered_set>
 
 using namespace std;
@@ -9,7 +9,7 @@ RC_GTEST_PROP(Structs, totalOrdering, (string a1, string b1, string a2, string b
     vt::Compound c1{vt::Nested{a1}, vt::Nested{b1}};
     vt::Compound c2{vt::Nested{a2}, vt::Nested{b2}};
 
-    auto unequal = [](const vt::Compound &smaller, const vt::Compound &larger) {
+    auto unequal = [](const vt::Compound& smaller, const vt::Compound& larger) {
         RC_ASSERT(smaller < larger);
         RC_ASSERT(smaller <= larger);
         RC_ASSERT(!(smaller > larger));
@@ -23,7 +23,7 @@ RC_GTEST_PROP(Structs, totalOrdering, (string a1, string b1, string a2, string b
         RC_ASSERT(!(larger == smaller));
         RC_ASSERT(larger != smaller);
     };
-    auto equal = [](const vt::Compound &a, const vt::Compound &b) {
+    auto equal = [](const vt::Compound& a, const vt::Compound& b) {
         RC_ASSERT(!(a < b));
         RC_ASSERT(a <= b);
         RC_ASSERT(!(a > b));
@@ -88,7 +88,7 @@ TEST(Structs, hashIsUsableForContainers) {
 
 TEST(Structs, insertion) {
     std::stringstream stream;
-    vt::Compound c{vt::Nested{"abc"}, vt::Nested{"def"}};
+    vt::Compound      c{vt::Nested{"abc"}, vt::Nested{"def"}};
 
     stream << c;
     EXPECT_EQ(R"({ "a": { "s": "abc" }, "b": { "s": "def" } })", stream.str());

@@ -189,53 +189,60 @@ TEST(parser, read_mapping) {
     "o5": null,
     "o6": [4, 5, 6]
 })");
-    Parser       parser(&stream);
-    Struct       actual = parser.read_mapping<Struct>([](Parser& p, Struct& target, string_view key) {
+    Parser parser(&stream);
+    Struct actual;
+    parser.read_mapping<Struct>(actual, [](Parser& p, Struct& target, string_view key) {
         if(key == "x") {
-            target.x = p.read_scalar<double>();
+            p.read_scalar<double>(target.x);
         } else if(key == "y") {
-            target.y = p.read_scalar<double>();
+            p.read_scalar<double>(target.y);
         } else if(key == "n") {
-            target.n = p.read_scalar<int>();
+            p.read_scalar<int>(target.n);
         } else if(key == "b1") {
-            target.b1 = p.read_scalar<bool>();
+            p.read_scalar<bool>(target.b1);
         } else if(key == "b2") {
-            target.b2 = p.read_scalar<bool>();
+            p.read_scalar<bool>(target.b2);
         } else if(key == "s") {
-            target.s = p.read_scalar<string>();
+            p.read_scalar<string>(target.s);
         } else if(key == "v") {
-            target.v = p.read_sequence<vector<int>>([](Parser& p2, vector<int>& v) {
-                v.push_back(p2.read_scalar<int>());
+            p.read_sequence<vector<int>>(target.v, [](Parser& p2, vector<int>& v) {
+                int i;
+                p2.read_scalar<int>(i);
+                v.push_back(i);
             });
         } else if(key == "o1") {
-            target.o1 = p.read_scalar<optional<int>>();
+            p.read_scalar<optional<int>>(target.o1);
         } else if(key == "o2") {
-            target.o2 = p.read_scalar<optional<int>>();
+            p.read_scalar<optional<int>>(target.o2);
         } else if(key == "nested") {
-            target.nested = p.read_mapping<Nested>([](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<Nested>(target.nested, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = p2.read_scalar<string>();
+                    p2.read_scalar<string>(n.value);
                 }
             });
         } else if(key == "o3") {
-            target.o3 = p.read_mapping<optional<Nested>>([](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<optional<Nested>>(target.o3, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = p2.read_scalar<string>();
+                    p2.read_scalar<string>(n.value);
                 }
             });
         } else if(key == "o4") {
-            target.o4 = p.read_mapping<optional<Nested>>([](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<optional<Nested>>(target.o4, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    n.value = p2.read_scalar<string>();
+                    p2.read_scalar<string>(n.value);
                 }
             });
         } else if(key == "o5") {
-            target.o5 = p.read_sequence<optional<vector<int>>>([](Parser& p2, vector<int>& v) {
-                v.push_back(p2.read_scalar<int>());
+            p.read_sequence<optional<vector<int>>>(target.o5, [](Parser& p2, vector<int>& v) {
+                int i;
+                p2.read_scalar<int>(i);
+                v.push_back(i);
             });
         } else if(key == "o6") {
-            target.o6 = p.read_sequence<optional<vector<int>>>([](Parser& p2, vector<int>& v) {
-                v.push_back(p2.read_scalar<int>());
+            p.read_sequence<optional<vector<int>>>(target.o6, [](Parser& p2, vector<int>& v) {
+                int i;
+                p2.read_scalar<int>(i);
+                v.push_back(i);
             });
         }
     });

@@ -21,50 +21,46 @@ Tokenizer::Tokenizer(istream* stream)
 }
 
 template <typename T, typename F>
-enable_if_t<!is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
+void Parser::read_mapping(enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
     check_token<start_mapping_token>(d_tok.current());
     d_tok.advance();
 
-    T target{};
     read_members(target, forward<F>(consume));
 
     check_token<end_mapping_token>(d_tok.current());
     d_tok.advance();
-
-    return target;
 }
 
 template <typename T, typename F>
-enable_if_t<is_optional_v<T>, T> Parser::read_mapping(F&& consume) {
+void Parser::read_mapping(enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
-        return T{};
+        target.reset();
     } else {
-        return read_mapping<typename T::value_type>(forward<F>(consume));
+        target = typename T::value_type{};
+        read_mapping<typename T::value_type>(*target, forward<F>(consume));
     }
 }
 
 template <typename T, typename F>
-enable_if_t<!is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
+void Parser::read_sequence(enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
     check_token<start_sequence_token>(d_tok.current());
     d_tok.advance();
 
-    T target{};
     read_elements(target, forward<F>(consume));
 
     check_token<end_sequence_token>(d_tok.current());
     d_tok.advance();
-
-    return target;
 }
 
 template <typename T, typename F>
-enable_if_t<is_optional_v<T>, T> Parser::read_sequence(F&& consume) {
+void Parser::read_sequence(enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
-        return T{};
+        target.reset();
     } else {
-        return read_sequence<typename T::value_type>(forward<F>(consume));
+        target = typename T::value_type{};
+        read_sequence<typename T::value_type>(*target, forward<F>(consume));
     }
 }
 
@@ -110,61 +106,59 @@ void Parser::read_elements(T& target, F&& consume) {
 }
 
 template <typename T, typename Tok>
-T extract(const token& tok) {
+void extract(const token& tok, T &target) {
     istringstream istream(get<Tok>(tok).value);
-    T             target;
     istream >> target;
-    return target;
 }
 
 template <typename T>
-enable_if_t<is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+void read_actual_scalar(const token& tok, enable_if_t<is_same_v<bool, T>, T> &target) {
     if(match_token<true_token>(tok)) {
-        return true;
+        target = true;
     } else if(match_token<false_token>(tok)) {
-        return false;
+        target = false;
     } else {
         throw BadJson("expected either 'true' or 'false");
     }
 }
 
 template <typename T>
-enable_if_t<is_floating_point_v<T>, T> read_actual_scalar(const token& tok) {
+void read_actual_scalar(const token& tok, enable_if_t<is_floating_point_v<T>, T> &target) {
     if(match_token<float_token>(tok)) {
-        return extract<T, float_token>(tok);
+        extract<T, float_token>(tok, target);
     } else if(match_token<int_token>(tok)) {
-        return extract<T, int_token>(tok);
+        extract<T, int_token>(tok, target);
     } else {
         throw BadJson("unexpected token");
     }
 }
 
 template <typename T>
-enable_if_t<is_integral_v<T> && !is_same_v<bool, T>, T> read_actual_scalar(const token& tok) {
+void read_actual_scalar(const token& tok, enable_if_t<is_integral_v<T> && !is_same_v<bool, T>, T> &target) {
     check_token<int_token>(tok);
-    return extract<T, int_token>(tok);
+    extract<T, int_token>(tok, target);
 }
 
 template <typename T>
-enable_if_t<is_same_v<string, T>, T> read_actual_scalar(const token& tok) {
+void read_actual_scalar(const token& tok, enable_if_t<is_same_v<string, T>, T> &target) {
     check_token<string_token>(tok);
-    return get<string_token>(tok).value;
+    target = get<string_token>(tok).value;
 }
 
 template <typename T>
-enable_if_t<!is_optional_v<T>, T> Parser::read_scalar() {
-    T v = read_actual_scalar<T>(d_tok.current());
+void Parser::read_scalar(enable_if_t<!is_optional_v<T>, T> &target) {
+    read_actual_scalar<T>(d_tok.current(), target);
     d_tok.advance();
-    return v;
 }
 
 template <typename T>
-enable_if_t<is_optional_v<T>, T> Parser::read_scalar() {
+void Parser::read_scalar(enable_if_t<is_optional_v<T>, T> &target) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
-        return T{};
+        target.reset();
     } else {
-        return read_scalar<typename T::value_type>();
+        target = typename T::value_type{};
+        return read_scalar<typename T::value_type>(*target);
     }
 }
 

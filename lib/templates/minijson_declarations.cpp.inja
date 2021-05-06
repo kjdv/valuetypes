@@ -64,19 +64,19 @@ class Parser {
       : d_tok(stream) {}
 
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
-    std::enable_if_t<!is_optional_v<T>, T> read_mapping(F&& consume);
+    void read_mapping(std::enable_if_t<!is_optional_v<T>, T> &target, F&& consume);
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target, string_view key)
-    std::enable_if_t<is_optional_v<T>, T> read_mapping(F&& consume);
+    void read_mapping(std::enable_if_t<is_optional_v<T>, T> &target, F&& consume);
 
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
-    std::enable_if_t<!is_optional_v<T>, T> read_sequence(F&& consume);
+    void read_sequence(std::enable_if_t<!is_optional_v<T>, T> &target, F&& consume);
     template <typename T, typename F> // signature of F should be void(Parser &p, T& target)
-    std::enable_if_t<is_optional_v<T>, T> read_sequence(F&& consume);
+    void read_sequence(std::enable_if_t<is_optional_v<T>, T> &target, F&& consume);
 
     template <typename T>
-    std::enable_if_t<!is_optional_v<T>, T> read_scalar();
+    void read_scalar(std::enable_if_t<!is_optional_v<T>, T> &target);
     template <typename T>
-    std::enable_if_t<is_optional_v<T>, T> read_scalar();
+    void read_scalar(std::enable_if_t<is_optional_v<T>, T> &target);
 
     bool is_eof() const noexcept;
 

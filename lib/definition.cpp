@@ -49,7 +49,7 @@ string_view extract(const composite::mapping& m, string_view key) {
     return m.at(string(key)).as<string>();
 }
 
-Member from_composite(const composite::composite& n, const unordered_set<string> &local_typedefs) {
+Member from_composite(const composite::composite& n, const unordered_set<string>& local_typedefs) {
     auto& m           = n.as<composite::mapping>();
     auto  type        = extract(m, "type");
     auto  name        = extract(m, "name");
@@ -90,9 +90,9 @@ DefinitionStore load(const kjson::document& doc) {
         ns = it->second.as<string>();
     }
 
-    vector<Definition> defs;
+    vector<Definition>    defs;
     unordered_set<string> local_typedefs;
-    auto&              ts = as_map.at("types").as<composite::sequence>();
+    auto&                 ts = as_map.at("types").as<composite::sequence>();
     defs.reserve(ts.size());
 
     transform(ts.begin(), ts.end(), back_inserter(defs), [&](const composite::composite& d) {
