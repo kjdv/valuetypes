@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace valuetypes {
 
@@ -48,7 +49,7 @@ string_view extract(const composite::mapping& m, string_view key) {
     return m.at(string(key)).as<string>();
 }
 
-Member from_composite(const composite::composite& n) {
+Member from_composite(const composite::composite& n, const unordered_set<string> &local_typedefs) {
     auto& m           = n.as<composite::mapping>();
     auto  type        = extract(m, "type");
     auto  name        = extract(m, "name");
@@ -66,6 +67,8 @@ Member from_composite(const composite::composite& n) {
             return make_float_like(name, it->second);
         } else if(type == "string") {
             return Member{string(name), "std::string", optional<string>{}};
+        } else if(auto it = local_typedefs.find(string(type)); it != local_typedefs.end()) {
+            return Member{string(name), string(type), optional<string>{}};
         } else {
             throw BadDefinition("no such type");
         }
@@ -88,10 +91,11 @@ DefinitionStore load(const kjson::document& doc) {
     }
 
     vector<Definition> defs;
+    unordered_set<string> local_typedefs;
     auto&              ts = as_map.at("types").as<composite::sequence>();
     defs.reserve(ts.size());
 
-    transform(ts.begin(), ts.end(), back_inserter(defs), [](const composite::composite& d) {
+    transform(ts.begin(), ts.end(), back_inserter(defs), [&](const composite::composite& d) {
         auto& m = d.as<composite::mapping>();
 
         auto  name = extract(m, "name");
@@ -99,8 +103,9 @@ DefinitionStore load(const kjson::document& doc) {
 
         vector<Member> members;
         members.reserve(mseq.size());
-        transform(mseq.begin(), mseq.end(), back_inserter(members), from_composite);
+        transform(mseq.begin(), mseq.end(), back_inserter(members), [&](auto&& item) { return from_composite(item, local_typedefs); });
 
+        local_typedefs.emplace(name);
         return Definition{string(name), move(members)};
     });
 

@@ -5,7 +5,8 @@ C++ code generator for value types
 ## Todo
 
 - [x] Support for optionals
-- [ ] Support for nested structs
+- [x] Support for nested structs
+- [ ] Support for variants
 - [ ] Support for vectors
-- [ ] Support for default values
 - [ ] Self-hosting internal data structures, removing kjson dependency
+- [ ] Support for default values

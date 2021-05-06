@@ -1,0 +1,19 @@
+{
+  "namespace": "vt",
+  "types": [{
+    "name": "Nested",
+    "members": [{
+      "name": "s",
+      "type": "string"
+    }]
+  },{
+    "name": "Compound",
+    "members": [{
+      "name": "a",
+      "type": "Nested"
+    }, {
+      "name": "b",
+      "type": "Nested"
+    }]
+  }]
+}
