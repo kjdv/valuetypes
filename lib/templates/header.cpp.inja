@@ -17,12 +17,9 @@ struct {{ typedef.name }} {
 
 bool operator==(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 bool operator!=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
-
-bool operator<(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
-bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
-bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
-bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
 ## endfor
+
+{% include "comparison_declarations" %}
 
 {% if namespace %}} // namespace {{ namespace }}{% endif %}
 

@@ -1,0 +1,7 @@
+## for typedef in typedefs
+bool operator<(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator<=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator>(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+bool operator>=(const {{ typedef.name }} &a, const {{ typedef.name}} &b) noexcept;
+
+## endfor

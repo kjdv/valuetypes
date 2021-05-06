@@ -3,6 +3,8 @@ set(template_sources
     templates.cpp 
     ${CMAKE_CURRENT_BINARY_DIR}/header.cpp 
     ${CMAKE_CURRENT_BINARY_DIR}/source.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/comparison_declarations.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/comparison_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/hash_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/iostream_declarations.cpp
@@ -18,6 +20,8 @@ endfunction()
 
 generate_template(header)
 generate_template(source)
+generate_template(comparison_declarations)
+generate_template(comparison_definitions)
 generate_template(hash_declarations)
 generate_template(hash_definitions)
 generate_template(iostream_declarations)

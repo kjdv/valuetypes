@@ -17,6 +17,8 @@ inja::Environment make_env() {
 
     include_template(env, "minijson_declarations", minijson_declarations());
     include_template(env, "minijson_definitions", minijson_definitions());
+    include_template(env, "comparison_declarations", comparison_declarations());
+    include_template(env, "comparison_definitions", comparison_definitions());
     include_template(env, "hash_declarations", hash_declarations());
     include_template(env, "hash_definitions", hash_definitions());
     include_template(env, "iostream_declarations", iostream_declarations());
