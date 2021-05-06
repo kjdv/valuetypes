@@ -30,16 +30,4 @@ void from_json(std::istream& in, {{ typedef.name }} &v);
 
 {% if namespace %}} // namespace {{ namespace }}{% endif %}
 
-namespace std {
-
-## for typedef in typedefs
-ostream &operator<<(ostream& out, const {{ typedef.namespace_name }} &v);
-istream &operator>>(istream& in, {{ typedef.namespace_name }} &v);
-
-template<>
-struct hash<{{typedef.namespace_name}}> {
-    std::size_t operator()(const {{typedef.namespace_name}} &v) const noexcept;
-};
-
-## endfor
-} // namespace std
+{% include "hash_declarations" %}

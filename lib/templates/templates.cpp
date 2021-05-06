@@ -15,6 +15,8 @@ void include_template(inja::Environment& env, std::string_view name, std::string
 inja::Environment make_env() {
     inja::Environment env;
 
+    include_template(env, "hash_declarations", hash_declarations());
+    include_template(env, "hash_definitions", hash_definitions());
     include_template(env, "minijson_declarations", minijson_declarations());
     include_template(env, "minijson_definitions", minijson_definitions());
 

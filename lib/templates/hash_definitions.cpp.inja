@@ -1,0 +1,35 @@
+namespace std {
+
+namespace {
+
+std::size_t hash_combine() {
+    return 0;
+}
+
+template <typename Head, typename... Tail>
+std::size_t hash_combine(const Head &head, Tail... tail) {
+    hash<Head> hasher;
+    auto h = hasher(head);
+    auto t = hash_combine(std::forward<Tail>(tail)...);
+    return t ^ (h + 0x9e3779b9 + (t << 6) + (t >> 2));
+}
+
+} // anonymous namespace
+
+## for typedef in typedefs
+ostream &operator<<(ostream& out, const {{typedef.namespace_name }} &v) {
+    {{ namespace }}::to_json(out, v);
+    return out;
+}
+
+istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
+    {{ namespace }}::from_json(in, v);
+    return in;
+}
+
+std::size_t hash<{{typedef.namespace_name}}>::operator()(const {{typedef.namespace_name}} &v) const noexcept {
+    return hash_combine({% for member in typedef.members %}v.{{ member.name }}{% if not loop.is_last %}, {% endif %}{% endfor %});
+}
+
+## endfor
+} // namespace std
