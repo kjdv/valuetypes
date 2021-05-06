@@ -14,6 +14,7 @@ void include_template(inja::Environment& env, std::string_view name, std::string
 
 inja::Environment make_env() {
     inja::Environment env;
+    env.set_search_included_templates_in_files(false);
 
     include_template(env, "minijson_declarations", minijson_declarations());
     include_template(env, "minijson_definitions", minijson_definitions());
@@ -26,7 +27,6 @@ inja::Environment make_env() {
     include_template(env, "iostream_declarations", iostream_declarations());
     include_template(env, "iostream_definitions", iostream_definitions());
 
-    env.set_search_included_templates_in_files(false);
     return env;
 }
 

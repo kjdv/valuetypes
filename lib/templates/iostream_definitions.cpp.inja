@@ -59,7 +59,11 @@ void from_json(istream& in, {{ typedef.name }} &v) {
 ## endfor
     });
 }
+
 ## endfor
+namespace {
+{% include "minijson_definitions" %}
+} // anonymous namespace
 } // {% if namespace %}namespace {{ namespace }}{% endif %}
 
 namespace std {
@@ -77,11 +81,5 @@ istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
 
 ## endfor
 } // namespace std
-
-{% if namespace %}namespace {{ namespace }} { {% endif %}
-namespace {
-{% include "minijson_definitions" %}
-} // anonymous namespace
-} // {% if namespace %}namespace {{ namespace }}{% endif %}
 
 // end iostream_definitions.cpp.inja
