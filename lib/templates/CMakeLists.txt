@@ -1,4 +1,4 @@
-set(template_sources templates.h header.cpp source.cpp)
+set(template_sources templates.h templates.cpp header.cpp source.cpp)
 
 function(generate_template name)
     file(READ ${name}.cpp.inja content)
@@ -15,4 +15,5 @@ target_include_directories(templates
     PUBLIC
       "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
 )
+target_link_libraries(templates pantor::inja)
 

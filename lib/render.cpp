@@ -2,9 +2,10 @@
 #include "templates/templates.h"
 #include <algorithm>
 #include <fstream>
-#include <inja/inja.hpp>
 #include <nlohmann/json.hpp>
 #include <vector>
+
+#include <iostream>
 
 namespace valuetypes {
 
@@ -22,9 +23,9 @@ fs::path output_file(const fs::path& dir, const fs::path& base_filename, string_
     return cp;
 }
 
-void render(const fs::path& p, string_view tmpl, const json& data) {
+void render(const fs::path& p, inja::Environment& env, string_view tmpl, const json& data) {
     ofstream file(p);
-    inja::render_to(file, tmpl, data);
+    file << env.render(tmpl, data);
 }
 
 json member_to_json(const Member m) {
@@ -95,8 +96,10 @@ void render(const DefinitionStore& ds, const options& opts) {
     json data       = defstore_to_json(ds);
     data["options"] = opts_to_json(opts);
 
-    render(header_filename, templates::header(), data);
-    render(source_filename, templates::source(), data);
+    auto env = templates::make_env();
+
+    render(header_filename, env, templates::header(), data);
+    render(source_filename, env, templates::source(), data);
 }
 
 } // namespace valuetypes
