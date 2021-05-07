@@ -42,7 +42,7 @@ string token_s(const token& t) {
         } else if constexpr(is_same_v<T, float_token>) {
             return arg.value;
         } else {
-            return to_string(t.index());
+            return std::to_string(t.index());
         }
     },
                  t);
@@ -143,6 +143,47 @@ TEST(tokenizer, bad_token) {
         FAIL();
     } catch(const BadJson&) {
         SUCCEED();
+    }
+}
+
+template <typename T>
+void try_parse(std::string content) {
+    std::stringstream stream(content);
+    Parser p(&stream);
+    T x{};
+    p.read_scalar<T>(x);
+}
+
+TEST(badjson, exception_formatting) {
+    try {
+        try_parse<int>("{}");
+        FAIL() << "expected an exception";
+    } catch (const BadJson &e) {
+        EXPECT_STREQ("unexpected token, expected integer, got {", e.what());
+    }
+    try {
+        try_parse<bool>("{}");
+        FAIL() << "expected an exception";
+    } catch (const BadJson &e) {
+        EXPECT_STREQ("expected either true or false, got {", e.what());
+    }
+    try {
+        try_parse<double>("{}");
+        FAIL() << "expected an exception";
+    } catch (const BadJson &e) {
+        EXPECT_STREQ("expected a number, got {", e.what());
+    }
+    try {
+        try_parse<optional<int>>("nufl");
+        FAIL() << "expected an exception";
+    } catch (const BadJson &e) {
+        EXPECT_STREQ("unexpected char in literal, expected l, got f", e.what());
+    }
+    try {
+        try_parse<int>("$");
+        FAIL() << "expected an exception";
+    } catch (const BadJson &e) {
+        EXPECT_STREQ("unexpected token: $", e.what());
     }
 }
 

@@ -2,6 +2,83 @@
 
 namespace minijson { // definitions
 
+
+string concat() {
+    return "";
+}
+
+template <typename Head, typename... Tail>
+string concat(const Head &head, Tail&&... tail);
+
+std::string to_string(start_mapping_token) {
+    return "{";
+}
+
+std::string to_string(end_mapping_token) {
+    return "}";
+}
+
+std::string to_string(start_sequence_token) {
+    return "[";
+}
+
+std::string to_string(end_sequence_token) {
+    return "]";
+}
+
+std::string to_string(separator_token) {
+    return ",";
+}
+
+std::string to_string(mapper_token) {
+    return ":";
+}
+
+std::string to_string(const int_token &v) {
+    return v.value.empty() ? "integer" : concat("(integer) ", v.value);
+}
+
+std::string to_string(const float_token &v) {
+    return v.value.empty() ? "floating point" : concat("(floating point) ", v.value);
+}
+
+std::string to_string(const string_token &v) {
+    return v.value.empty() ? "string" : concat("(string) ", v.value);
+}
+
+std::string to_string(true_token) {
+    return "(bool) true";
+}
+
+std::string to_string(false_token) {
+    return "(bool) false";
+}
+
+std::string to_string(null_token) {
+    return "(null) null";
+}
+
+std::string to_string(eof_token) {
+    return "(eof)";
+}
+
+std::string to_string(const token &t) {
+    return std::visit([](auto&& item) {
+        return to_string(item);
+    }, t);
+}
+
+template <typename Head, typename... Tail>
+string concat(const Head &head, Tail&&... tail) {
+    if constexpr (is_convertible_v<Head, std::string>) {
+        return std::string(head) + concat(forward<Tail>(tail)...);
+    } else if constexpr (is_same_v<std::decay_t<Head>, char>) {
+        return std::string(1, head) + concat(forward<Tail>(tail)...);
+    } else {
+        return to_string(head) + concat(forward<Tail>(tail)...);
+    }
+}   
+
 template <typename T>
 constexpr bool match_token(const token& t) noexcept {
     return holds_alternative<T>(t);
@@ -10,7 +87,7 @@ constexpr bool match_token(const token& t) noexcept {
 template <typename T>
 void check_token(const token& t) {
     if(!match_token<T>(t)) {
-        throw BadJson("unexpected token");
+        throw BadJson(concat("unexpected token, expected ", T{}, ", got ", t));
     }
 }
 
@@ -118,7 +195,7 @@ void read_actual_scalar(const token& tok, enable_if_t<is_same_v<bool, T>, T> &ta
     } else if(match_token<false_token>(tok)) {
         target = false;
     } else {
-        throw BadJson("expected either 'true' or 'false");
+        throw BadJson(concat("expected either true or false, got ", tok));
     }
 }
 
@@ -129,7 +206,7 @@ void read_actual_scalar(const token& tok, enable_if_t<is_floating_point_v<T>, T>
     } else if(match_token<int_token>(tok)) {
         extract<T, int_token>(tok, target);
     } else {
-        throw BadJson("unexpected token");
+        throw BadJson(concat("expected a number, got ", tok));
     }
 }
 
@@ -177,7 +254,7 @@ void extract_literal(istream& input, string_view tail) {
     for(char e : tail) {
         int c = input.get();
         if(c != e)
-            throw BadJson("unexpected char in literal");
+            throw BadJson(concat("unexpected char in literal, expected ", e, ", got ", (char)c));
     }
 }
 
@@ -246,7 +323,7 @@ string extract_utf8(istream& input) {
             break;
 
         if(!is_hex(c))
-            throw BadJson("expected hex digit");
+            throw BadJson(concat("expected hex digit in utf8-code: ", char(c)));
 
         wc <<= 4;
         wc |= single_decode((char)c);
@@ -375,7 +452,7 @@ const token& Tokenizer::advance() {
             break;
 
         default:
-            throw BadJson("unexpected token");
+            throw BadJson(concat("unexpected token: ", char(c)));
         }
     } else {
         d_current = eof_token{};

@@ -18,7 +18,7 @@ void generate(const options& opts) {
         ifstream file(opts.input_file);
         return kjson::load(file);
     }()
-                   .expect("valid json");
+                   .expect("could not input file, invalid json?");
     auto defs = load(doc);
 
     render(defs, opts);
