@@ -28,10 +28,22 @@ void render(const fs::path& p, inja::Environment& env, string_view tmpl, const j
     file << env.render(tmpl, data);
 }
 
-json member_to_json(const Member m) {
+json member_to_json(const Member& m) {
     json d;
     d["name"] = m.name;
-    d["type"] = m.optional ? string("std::optional<") + m.type + ">" : m.type;
+
+    auto type = [&] {
+        auto base = m.type;
+        if(m.value_type) {
+            base += string("<") + m.value_type->type + ">";
+        }
+        if(m.optional) {
+            base = string("std::optional<") + base + ">";
+        }
+        return base;
+    }();
+
+    d["type"] = type;
 
     if(m.default_value) {
         d["default_value"] = *m.default_value;

@@ -24,6 +24,27 @@ ${minijson_declarations}
 using namespace std;
 using namespace minijson;
 
+template <typename T>
+void from_json(minijson::Parser &p, T &v) {
+    p.read_scalar<T>(v);
+}
+
+template <typename T>
+void from_json(minijson::Parser &p, std::vector<T> &v) {
+    p.read_sequence<std::vector<T>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+        target.emplace_back();
+        from_json(p2, target.back());
+    });
+}
+
+template <typename T>
+void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
+    p.read_sequence<std::optional<std::vector<T>>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+        target.emplace_back();
+        from_json(p2, target.back());
+    });
+}
+
 struct tokenizer_testcase {
     string        input;
     vector<token> tokens;

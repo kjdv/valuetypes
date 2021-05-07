@@ -2,14 +2,6 @@
 
 namespace minijson { // definitions
 
-
-string concat() {
-    return "";
-}
-
-template <typename Head, typename... Tail>
-string concat(const Head &head, Tail&&... tail);
-
 std::string to_string(start_mapping_token) {
     return "{";
 }
@@ -68,6 +60,10 @@ std::string to_string(const token &t) {
     }, t);
 }
 
+string concat() {
+    return "";
+}
+
 template <typename Head, typename... Tail>
 string concat(const Head &head, Tail&&... tail) {
     if constexpr (is_convertible_v<Head, std::string>) {
@@ -124,6 +120,7 @@ void Parser::read_sequence(enable_if_t<!is_optional_v<T>, T> &target, F&& consum
     check_token<start_sequence_token>(d_tok.current());
     d_tok.advance();
 
+    target.clear();
     read_elements(target, forward<F>(consume));
 
     check_token<end_sequence_token>(d_tok.current());

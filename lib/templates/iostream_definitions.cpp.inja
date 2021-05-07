@@ -26,6 +26,17 @@ void to_json(ostream &out, const T &v) {
         out << v;
     } else if constexpr (is_same_v<U, string>) {
         out << quoted(v);
+    } else if constexpr (is_vector_v<U>) {
+        out << "[ ";
+        bool first = true;
+        for (auto&& item : v) {
+            if (!first) {
+                out << ", ";
+            }
+            to_json(out, item);
+            first = false;
+        }
+        out << " ]";
     } else {
         assert(false && "implement me");
     }
@@ -36,6 +47,22 @@ void from_json(minijson::Parser &p, T &v) {
     p.read_scalar<T>(v);
 }
 
+template <typename T>
+void from_json(minijson::Parser &p, std::vector<T> &v) {
+    p.read_sequence<std::vector<T>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+        target.emplace_back();
+        from_json(p2, target.back());
+    });
+}
+
+template <typename T>
+void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
+    p.read_sequence<std::optional<std::vector<T>>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+        target.emplace_back();
+        from_json(p2, target.back());
+    });
+}
+
 ## for typedef in typedefs
 void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
     p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
@@ -44,6 +71,9 @@ void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
              from_json(p, target.{{member.name}});
         }
 ## endfor
+        else {
+            throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: "));
+        }
     });
 }
 

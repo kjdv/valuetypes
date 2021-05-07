@@ -13,11 +13,17 @@ class BadDefinition : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+struct AnonymousType {
+    std::string type;
+    bool        optional{false};
+};
+
 struct Member {
-    std::string                name;
-    std::string                type;
-    std::optional<std::string> default_value;
-    bool                       optional{false};
+    std::string                  name;
+    std::string                  type;
+    std::optional<std::string>   default_value{};
+    bool                         optional{false};
+    std::optional<AnonymousType> value_type{}; // only applicable for vectors
 };
 
 struct Definition {

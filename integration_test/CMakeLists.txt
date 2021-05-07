@@ -16,10 +16,11 @@ generate_value_type(point)
 generate_value_type(basic_types)
 generate_value_type(optionals)
 generate_value_type(structs)
+generate_value_type(vectors)
 
 file(GLOB sources *.h *.cpp)
 
 add_executable(integration_test ${sources})
-target_link_libraries(integration_test point basic_types optionals structs ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
+target_link_libraries(integration_test point basic_types optionals structs vectors ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
 
 gtest_discover_tests(integration_test)

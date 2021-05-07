@@ -4,16 +4,35 @@ namespace std {
 
 namespace {
 
+constexpr std::size_t combine(std::size_t a, std::size_t b) noexcept {
+    return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
+}
+
+template <typename T>
+constexpr std::size_t base_hash(const T&v) noexcept {
+    hash<T> hasher;
+    return hasher(v);
+}
+
+template <typename T>
+constexpr std::size_t base_hash(const std::vector<T> &v) noexcept {
+    std::size_t h{0};
+    hash<T> ih;
+    for (auto&& item : v) {
+        h = combine(h, ih(item));
+    }
+    return h;
+}
+
 std::size_t hash_combine() {
     return 0;
 }
 
 template <typename Head, typename... Tail>
 std::size_t hash_combine(const Head &head, Tail... tail) {
-    hash<Head> hasher;
-    auto h = hasher(head);
+    auto h = base_hash(head);
     auto t = hash_combine(std::forward<Tail>(tail)...);
-    return t ^ (h + 0x9e3779b9 + (t << 6) + (t >> 2));
+    return combine(t, h);
 }
 
 } // anonymous namespace

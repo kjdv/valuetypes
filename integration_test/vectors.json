@@ -1,0 +1,13 @@
+{
+  "namespace": "vt",
+  "types": [{
+    "name": "Vectors",
+    "members": [{
+      "name": "v",
+      "type": "vector",
+      "value_type": {
+        "type": "int"
+      }
+    }]
+  }]
+}

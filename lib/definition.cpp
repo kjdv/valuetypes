@@ -45,7 +45,16 @@ Member make_float_like(string_view name, string_view type, string_view default_v
     return make_basic(name, type, default_value);
 }
 
-string_view extract(const composite::mapping& m, string_view key) {
+AnonymousType make_anonymous_type(const composite::composite& c) {
+    auto&         at = c.as<composite::mapping>();
+    AnonymousType r{at.at("type").as<string>()};
+    if(auto it = at.find("optional"); it != at.end()) {
+        r.optional = it->second.as<bool>();
+    }
+    return r;
+}
+
+const string& extract(const composite::mapping& m, string_view key) {
     return m.at(string(key)).as<string>();
 }
 
@@ -66,9 +75,13 @@ Member from_composite(const composite::composite& n, const unordered_set<string>
         } else if(auto it = float_like.find(type); it != float_like.end()) {
             return make_float_like(name, it->second);
         } else if(type == "string") {
-            return Member{string(name), "std::string", optional<string>{}};
-        } else if(auto it = local_typedefs.find(string(type)); it != local_typedefs.end()) {
-            return Member{string(name), string(type), optional<string>{}};
+            return Member{name, "std::string"};
+        } else if(auto it = local_typedefs.find(type); it != local_typedefs.end()) {
+            return Member{name, type, optional<string>{}};
+        } else if(type == "vector") {
+            Member v{name, "std::vector"};
+            v.value_type = make_anonymous_type(m.at("value_type"));
+            return v;
         } else {
             throw BadDefinition("no such type");
         }

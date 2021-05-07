@@ -95,6 +95,11 @@ class Parser {
     Tokenizer d_tok;
 };
 
+std::string concat();
+
+template <typename Head, typename... Tail>
+std::string concat(const Head &head, Tail&&... tail);
+
 } // namespace minijson
 
 // end minijson_declarations.cpp.inja

@@ -3,6 +3,8 @@
 #include <structs/valuetypes.h>
 #include <unordered_set>
 
+namespace {
+
 using namespace std;
 
 RC_GTEST_PROP(Structs, totalOrdering, (string a1, string b1, string a2, string b2)) {
@@ -105,3 +107,5 @@ RC_GTEST_PROP(Structs, marshalling, (string a, string b)) {
 
     RC_ASSERT(c1 == c2);
 }
+
+} // namespace
