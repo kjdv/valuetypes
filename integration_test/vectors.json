@@ -20,5 +20,14 @@
       },
       "optional": true
     }]
+  }, {
+    "name": "VectorTo",
+    "members": [{
+      "name": "v",
+      "type": "vector",
+      "value_type": {
+        "type": "Vectors"
+      }
+    }]
   }]
 }

@@ -42,6 +42,10 @@ void to_json(ostream &out, const T &v) {
     }
 }
 
+## for typedef in typedefs
+void from_json(minijson::Parser &p, {{ typedef.name}} &v);
+## endfor
+
 template <typename T>
 void from_json(minijson::Parser &p, T &v) {
     p.read_scalar<T>(v);

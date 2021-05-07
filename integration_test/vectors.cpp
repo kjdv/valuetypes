@@ -2,6 +2,7 @@
 #include <rapidcheck/gtest.h>
 #include <unordered_set>
 #include <vectors/valuetypes.h>
+#include <algorithm>
 
 namespace {
 
@@ -115,6 +116,21 @@ RC_GTEST_PROP(Vectors, marshalling, (vector<int> a)) {
     stream << v1;
 
     vt::Vectors v2;
+    stream >> v2;
+
+    RC_ASSERT(v1 == v2);
+}
+
+RC_GTEST_PROP(Vectors, nestedMarshalling, (vector<vector<int>> a)) {
+    vt::VectorTo v1;
+    transform(a.begin(), a.end(), back_inserter(v1.v), [](const vector<int>& v) {
+        return vt::Vectors{v};
+    });
+
+    std::stringstream stream;
+    stream << v1;
+
+    vt::VectorTo v2;
     stream >> v2;
 
     RC_ASSERT(v1 == v2);
