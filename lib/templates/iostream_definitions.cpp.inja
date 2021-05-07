@@ -76,7 +76,7 @@ void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
         }
 ## endfor
         else {
-            throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: "));
+            throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: ", std::string(key)));
         }
     });
 }

@@ -1,8 +1,8 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <rapidcheck/gtest.h>
 #include <unordered_set>
 #include <vectors/valuetypes.h>
-#include <algorithm>
 
 namespace {
 
@@ -94,7 +94,7 @@ TEST(Vectors, insertion) {
 }
 
 TEST(Vectors, optionalInsertion1) {
-    std::stringstream stream;
+    std::stringstream   stream;
     vt::OptionalVectors v;
 
     stream << v;
@@ -102,7 +102,7 @@ TEST(Vectors, optionalInsertion1) {
 }
 
 TEST(Vectors, optionalInsertion2) {
-    std::stringstream stream;
+    std::stringstream   stream;
     vt::OptionalVectors v{optional<vector<optional<int>>>{{1, optional<int>{}, 3}}};
 
     stream << v;

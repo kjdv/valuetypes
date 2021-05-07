@@ -35,7 +35,7 @@ json member_to_json(const Member& m) {
     auto type = [&] {
         auto base = m.type;
         if(m.value_type) {
-            base += string("<") + (m.optional ? "std::optional<" : "" ) + m.value_type->type + (m.optional ? ">>" : ">");
+            base += string("<") + (m.optional ? "std::optional<" : "") + m.value_type->type + (m.optional ? ">>" : ">");
         }
         if(m.optional) {
             base = string("std::optional<") + base + ">";
