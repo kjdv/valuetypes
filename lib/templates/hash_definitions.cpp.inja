@@ -24,6 +24,11 @@ constexpr std::size_t base_hash(const std::vector<T> &v) noexcept {
     return h;
 }
 
+template <typename T>
+constexpr std::size_t base_hash(const std::optional<std::vector<T>> &v) noexcept {
+    return v ? base_hash(*v) : 0;
+}
+
 std::size_t hash_combine() {
     return 0;
 }

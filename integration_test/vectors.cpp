@@ -86,10 +86,26 @@ TEST(Vectors, hashIsUsableForContainers) {
 
 TEST(Vectors, insertion) {
     std::stringstream stream;
-    vt::Vectors       c{{1, 2, 3}};
+    vt::Vectors       v{{1, 2, 3}};
 
-    stream << c;
+    stream << v;
     EXPECT_EQ(R"({ "v": [ 1, 2, 3 ] })", stream.str());
+}
+
+TEST(Vectors, optionalInsertion1) {
+    std::stringstream stream;
+    vt::OptionalVectors v;
+
+    stream << v;
+    EXPECT_EQ(R"({ "v": null })", stream.str());
+}
+
+TEST(Vectors, optionalInsertion2) {
+    std::stringstream stream;
+    vt::OptionalVectors v{optional<vector<optional<int>>>{{1, optional<int>{}, 3}}};
+
+    stream << v;
+    EXPECT_EQ(R"({ "v": [ 1, null, 3 ] })", stream.str());
 }
 
 RC_GTEST_PROP(Vectors, marshalling, (vector<int> a)) {

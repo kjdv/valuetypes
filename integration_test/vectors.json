@@ -9,5 +9,16 @@
         "type": "int"
       }
     }]
+  }, {
+    "name": "OptionalVectors",
+    "members": [{
+      "name": "v",
+      "type": "vector",
+      "value_type": {
+        "type": "int",
+        "optional": true
+      },
+      "optional": true
+    }]
   }]
 }
