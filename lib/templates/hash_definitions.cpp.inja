@@ -25,7 +25,7 @@ constexpr std::size_t base_hash(const std::vector<T> &v) noexcept {
 }
 
 template <typename T>
-constexpr std::size_t base_hash(const std::optional<std::vector<T>> &v) noexcept {
+constexpr std::size_t base_hash(const std::optional<T> &v) noexcept {
     return v ? base_hash(*v) : 0;
 }
 
