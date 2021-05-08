@@ -9,16 +9,17 @@
 #include <variant>
 
 namespace valuetypes { 
+
 struct TemplateParameter {
     std::string type {  } ;
-    bool optional { false } ;
+    bool optional {  } ;
 };
 
 struct Member {
     std::string name {  } ;
     std::string type {  } ;
     std::optional<std::string> default_value {  } ;
-    bool optional { false } ;
+    bool optional {  } ;
     std::optional<TemplateParameter> value_type {  } ;
     std::optional<std::vector<TemplateParameter>> value_types {  } ;
 };
@@ -32,7 +33,6 @@ struct DefinitionStore {
     std::optional<std::string> ns {  } ;
     std::vector<Definition> types {  } ;
 };
-
 
 bool operator==(const TemplateParameter &a, const TemplateParameter &b) noexcept;
 bool operator!=(const TemplateParameter &a, const TemplateParameter &b) noexcept;

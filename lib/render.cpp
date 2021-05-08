@@ -4,8 +4,7 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <vector>
-
-#include <iostream>
+#include <regex>
 
 namespace valuetypes {
 
@@ -30,6 +29,17 @@ void render(const fs::path& p, inja::Environment& env, string_view tmpl, const j
 
 Variables opts_to_vars(const Options& opts) {
     Variables d;
+
+    const regex libname_regex(R"([a-zA-Z][a-zA-Z\-_]*)");
+
+    string libname = fs::absolute(opts.output_dir).filename();
+    bool is_valid = regex_match(libname, libname_regex);
+    if (!is_valid) {
+        libname = fs::absolute(opts.output_dir).parent_path().filename();
+        is_valid = regex_match(libname, libname_regex);
+    }
+
+    d["library_name"] = is_valid ? libname : string(opts.base_filename);
     d["base_filename"] = opts.base_filename;
     return d;
 }
@@ -46,6 +56,10 @@ void render(Variables vars, const Options& opts) {
 
     render(header_filename, env, templates::header(), vars);
     render(source_filename, env, templates::source(), vars);
+
+    if (opts.cmake) {
+        render(output_file(opts.output_dir, "CMakeLists", ".txt"), env, templates::cmakelists(), vars);
+    }
 }
 
 } // namespace valuetypes
