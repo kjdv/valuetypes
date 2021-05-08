@@ -28,123 +28,24 @@ void render(const fs::path& p, inja::Environment& env, string_view tmpl, const j
     file << env.render(tmpl, data);
 }
 
-string optionalize(string_view base) {
-    return string("std::optional<") + string(base) + ">";
-}
-
-string maybe_optionalize(bool should, string_view base) {
-    return should ? optionalize(base) : string(base);
-}
-
-json member_to_json(const Member& m) {
-    json d;
-    d["name"] = m.name;
-
-    auto type = [&] {
-        auto base = m.type;
-        if(m.value_type) {
-            base += string("<") + maybe_optionalize(m.value_type->optional, m.value_type->type) + ">";
-        } else if(m.value_types) {
-            base += string("<");
-
-            bool first = true;
-            for(auto& vt : *m.value_types) {
-                if(!first) {
-                    base += ", ";
-                }
-                base += maybe_optionalize(vt.optional, vt.type);
-                first = false;
-            }
-            base += ">";
-        }
-        return maybe_optionalize(m.optional, base);
-    }();
-
-    d["type"] = type;
-
-    if(m.value_types) {
-        vector<json> vts;
-        transform(m.value_types->begin(), m.value_types->end(), back_inserter(vts), [](auto&& item) {
-            json j;
-            auto n    = maybe_optionalize(item.optional, item.type);
-            j["name"] = n;
-            j["type"] = n;
-
-            return j;
-        });
-
-        d["value_types"] = vts;
-    } else {
-        d["value_types"] = nullptr;
-    }
-
-    if(m.default_value) {
-        d["default_value"] = *m.default_value;
-    } else {
-        d["default_value"] = nullptr;
-    }
-
-    return d;
-}
-
-json defintion_to_json(const Definition& d) {
-    json j;
-    j["name"] = d.name;
-
-    vector<json> members;
-    members.reserve(d.members.size());
-    transform(d.members.begin(), d.members.end(), back_inserter(members), member_to_json);
-
-    j["members"] = move(members);
-
-    return j;
-}
-
-json defstore_to_json(const DefinitionStore& ds) {
-    vector<json> defs;
-    defs.reserve(ds.typedefs.size());
-
-    transform(ds.typedefs.begin(), ds.typedefs.end(), back_inserter(defs), [&](auto&& item) {
-        auto d = defintion_to_json(item);
-        if(ds.namespace_) {
-            d["namespace_name"] = (*ds.namespace_) + "::" + item.name;
-        } else {
-            d["namespace_name"] = item.name;
-        }
-        return d;
-    });
-
-    json j;
-    j["typedefs"] = move(defs);
-
-    if(ds.namespace_) {
-        j["namespace"] = *ds.namespace_;
-    } else {
-        j["namespace"] = nullptr;
-    }
-
-    return j;
-}
-
-json opts_to_json(const options& opts) {
-    json d;
+Variables opts_to_vars(const Options& opts) {
+    Variables d;
     d["base_filename"] = opts.base_filename;
     return d;
 }
 
 } // namespace
 
-void render(const DefinitionStore& ds, const options& opts) {
+void render(Variables vars, const Options& opts) {
     auto header_filename = output_file(opts.output_dir, opts.base_filename, ".h");
     auto source_filename = output_file(opts.output_dir, opts.base_filename, ".cpp");
 
-    json data       = defstore_to_json(ds);
-    data["options"] = opts_to_json(opts);
+    vars["options"] = opts_to_vars(opts);
 
     auto env = templates::make_env();
 
-    render(header_filename, env, templates::header(), data);
-    render(source_filename, env, templates::source(), data);
+    render(header_filename, env, templates::header(), vars);
+    render(source_filename, env, templates::source(), vars);
 }
 
 } // namespace valuetypes

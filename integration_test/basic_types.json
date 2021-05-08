@@ -1,5 +1,5 @@
 {
-  "namespace": "bt",
+  "ns": "bt",
   "types": [{
     "name": "BasicTypes",
     "members": [{

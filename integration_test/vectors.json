@@ -1,5 +1,5 @@
 {
-  "namespace": "vt",
+  "ns": "vt",
   "types": [{
     "name": "Vectors",
     "members": [{

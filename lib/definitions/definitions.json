@@ -1,0 +1,65 @@
+{
+    "namespace": "valuetypes",
+    "types": [{
+        "name": "TemplateParameter",
+        "members": [{
+            "name": "type",
+            "type": "string"
+        }, {
+            "name": "optional",
+            "type": "bool"
+        }]
+    }, {
+        "name": "Member",
+        "members": [{
+            "name": "name",
+            "type": "string"
+        }, {
+            "name": "type",
+            "type": "string"
+        }, {
+            "name": "default_value",
+            "type": "string",
+            "optional": true
+        }, {
+            "name": "optional",
+            "type": "bool"
+        }, {
+            "name": "value_type",
+            "type": "TemplateParameter",
+            "optional": true
+        }, {
+            "name": "value_types",
+            "type": "vector",
+            "value_type": {
+                "type": "TemplateParameter"
+            },
+            "optional": true
+        }]
+    }, {
+        "name": "Definition",
+        "members": [{
+            "name": "name",
+            "type": "string"
+        }, {
+            "name": "members",
+            "type": "vector",
+            "value_type": {
+                "type": "Member"
+            }
+        }]
+    }, {
+        "name": "DefinitionStore",
+        "members": [{
+            "name": "ns",
+            "type": "string",
+            "optional": true
+        }, {
+            "name": "types",
+            "type": "vector",
+            "value_type": {
+                "type": "Definition"
+            }
+        }]
+    }]
+}

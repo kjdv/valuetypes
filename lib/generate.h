@@ -5,13 +5,13 @@
 
 namespace valuetypes {
 
-struct options {
+struct Options {
     bool                  cmake{false};
     std::filesystem::path input_file;
     std::filesystem::path output_dir;
     std::filesystem::path base_filename;
 };
 
-void generate(const options& opts);
+void generate(const Options& opts);
 
 } // namespace valuetypes

@@ -9,6 +9,7 @@
 #include <variant>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
+
 ## for typedef in typedefs
 struct {{ typedef.name }} {
 ## for member in typedef.members
@@ -17,7 +18,6 @@ struct {{ typedef.name }} {
 };
 
 ## endfor
-
 {% include "equality_declarations" %}
 {% include "comparison_declarations" %}
 {% if namespace %}} // namespace {{ namespace }}{% endif %}

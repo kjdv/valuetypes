@@ -1,10 +1,10 @@
 #pragma once
 
-#include "definition.h"
 #include "generate.h"
+#include "transform.h"
 
 namespace valuetypes {
 
-void render(const DefinitionStore& ds, const options& options);
+void render(Variables vars, const Options& options);
 
 }

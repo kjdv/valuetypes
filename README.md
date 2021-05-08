@@ -8,7 +8,8 @@ C++ code generator for value types
 - [x] Support for nested structs
 - [x] Support for variants
 - [x] Support for vectors
-- [ ] Self-hosting internal data structures, removing kjson dependency
+- [x] Self-hosting internal data structures, removing kjson dependency
+- [ ] CMakeFiles.txt generation
 - [ ] Support for default values
 - [ ] Human friendly variant keys
 - [ ] Switchable strict/loose json parsing

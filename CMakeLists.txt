@@ -14,9 +14,6 @@ enable_testing()
 
 find_package(inja CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
-find_package(Kjson CONFIG REQUIRED)
-find_package(Results CONFIG REQUIRED)
-find_package(Composite CONFIG REQUIRED)
 
 add_subdirectory(lib)
 add_subdirectory(app)

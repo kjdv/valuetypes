@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        valuetypes::options generate_options{
+        valuetypes::Options generate_options{
             static_cast<bool>(results.count("cmake")),
             results["input"].as<std::string>(),
             results["output"].as<std::string>(),
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
         return 0;
     } catch(const std::exception& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << '\n';
         return 1;
     }
 }
