@@ -13,3 +13,4 @@ C++ code generator for value types
 - [ ] Human friendly variant keys
 - [ ] Switchable strict/loose json parsing
 - [ ] Tested and improved error readability on non-happy paths
+- [ ] Selective generation, not all definitions need all headers and code snippets
