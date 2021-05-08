@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <iomanip>
+#include <sstream>
 
 namespace valuetypes {
 
@@ -112,7 +114,24 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
         vars["value_types"] = nullptr;
     }
 
-    fill_optional(vars, "default_value", member.default_value);
+    auto default_value = member.default_value;
+    if (!default_value && !member.optional) {
+        if (member.type == "bool") {
+            default_value = "false";
+        } else if (auto it = int_like.find(member.type); it != int_like.end()) {
+            default_value = "0";
+        } else if (auto it = float_like.find(member.type); it != float_like.end()) {
+            default_value = "0.0";
+        }
+    }
+
+    if (default_value && member.type == "string") {
+        ostringstream stream;
+        stream << quoted(*default_value);
+        default_value = stream.str();
+    }
+
+    fill_optional(vars, "default_value", default_value);
 
     return vars;
 }

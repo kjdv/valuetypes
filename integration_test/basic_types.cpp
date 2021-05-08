@@ -17,6 +17,16 @@ TEST(BasicTypes, construction) {
     EXPECT_EQ(3.14, bt.x);
 }
 
+TEST(BasicTypes, constructWithDefaults) {
+    WithDefaults wd{};
+
+    EXPECT_TRUE(wd.b);
+    EXPECT_EQ(123, wd.n);
+    EXPECT_EQ(3.14, wd.x);
+    EXPECT_EQ("abc", wd.s);
+    EXPECT_EQ(456, wd.o);
+}
+
 TEST(BasicTypes, json) {
     ostringstream stream;
     BasicTypes    bt{};

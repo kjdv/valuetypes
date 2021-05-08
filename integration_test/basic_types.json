@@ -57,5 +57,29 @@
       "name": "d",
       "type": "double"
     }]
+  }, {
+    "name": "WithDefaults",
+    "members": [{
+      "name": "b",
+      "type": "bool",
+      "default_value": true
+    }, {
+      "name": "n",
+      "type": "int",
+      "default_value": 123
+    }, {
+      "name": "x",
+      "type": "double",
+      "default_value": 3.14
+    }, {
+      "name": "s",
+      "type": "string",
+      "default_value": "abc"
+    }, {
+      "name": "o",
+      "type": "int",
+      "default_value": 456,
+      "optional": true
+    }]
   }]
 }

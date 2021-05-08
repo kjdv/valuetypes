@@ -12,14 +12,14 @@ namespace valuetypes {
 
 struct TemplateParameter {
     std::string type {  } ;
-    bool optional {  } ;
+    bool optional { false } ;
 };
 
 struct Member {
     std::string name {  } ;
     std::string type {  } ;
     std::optional<std::string> default_value {  } ;
-    bool optional {  } ;
+    bool optional { false } ;
     std::optional<TemplateParameter> value_type {  } ;
     std::optional<std::vector<TemplateParameter>> value_types {  } ;
 };

@@ -215,8 +215,22 @@ void read_actual_scalar(const token& tok, enable_if_t<is_integral_v<T> && !is_sa
 
 template <typename T>
 void read_actual_scalar(const token& tok, enable_if_t<is_same_v<string, T>, T> &target) {
-    check_token<string_token>(tok);
-    target = get<string_token>(tok).value;
+    // other scalar types can easily be converted into strings
+    if (match_token<string_token>(tok)) {
+        target = get<string_token>(tok).value;
+    } else if (match_token<true_token>(tok)) {
+        target = "true";
+    } else if (match_token<false_token>(tok)) {
+        target = "false";
+    } else if (match_token<null_token>(tok)) {
+        target = "null";
+    } else if (match_token<int_token>(tok)) {
+        target = get<int_token>(tok).value;
+    } else if (match_token<float_token>(tok)) {
+        target = get<float_token>(tok).value;
+    } else {
+        check_token<string_token>(tok);
+    }
 }
 
 template <typename T>
