@@ -6,6 +6,7 @@
 #include <string>
 #include <optional>
 #include <vector>
+#include <variant>
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 ## for typedef in typedefs

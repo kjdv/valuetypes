@@ -19,11 +19,12 @@ struct AnonymousType {
 };
 
 struct Member {
-    std::string                  name;
-    std::string                  type;
-    std::optional<std::string>   default_value{};
-    bool                         optional{false};
-    std::optional<AnonymousType> value_type{}; // only applicable for vectors
+    std::string                               name;
+    std::string                               type;
+    std::optional<std::string>                default_value{};
+    bool                                      optional{false};
+    std::optional<AnonymousType>              value_type{};  // only applicable for vectors
+    std::optional<std::vector<AnonymousType>> value_types{}; // only applicable for variants
 };
 
 struct Definition {

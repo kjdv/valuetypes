@@ -37,6 +37,17 @@ struct is_vector<std::vector<T>>: std::true_type
 template <typename T>
 constexpr bool is_vector_v = is_vector<T>::value;
 
+template <typename... Ts>
+struct is_variant: std::false_type
+{};
+
+template <typename... Ts>
+struct is_variant<std::variant<Ts...>>: std::true_type
+{};
+
+template <typename... Ts>
+constexpr bool is_variant_v = is_variant<Ts...>::value;
+
 } // anonymous namespace
 
 {% include "equality_definitions" %}

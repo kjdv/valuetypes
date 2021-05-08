@@ -26,6 +26,12 @@ const unordered_map<string_view, string_view> float_like = {
     {"float", "float"},
     {"double", "double"}};
 
+const unordered_map<string_view, string_view> one_to_one = {
+    {"bool", "bool"},
+    {"string", "std::string"},
+    {"vector", "std::vector"},
+    {"variant", "std::variant"}};
+
 Member make_basic(string_view name, string_view type, string_view default_value) {
     return Member{
         string(name),
@@ -45,9 +51,21 @@ Member make_float_like(string_view name, string_view type, string_view default_v
     return make_basic(name, type, default_value);
 }
 
+string_view type_translate(string_view input_type) {
+    if(auto it = int_like.find(input_type); it != int_like.end()) {
+        return it->second;
+    } else if(auto it = float_like.find(input_type); it != float_like.end()) {
+        return it->second;
+    } else if(auto it = one_to_one.find(input_type); it != one_to_one.end()) {
+        return it->second;
+    } else {
+        return input_type;
+    }
+}
+
 AnonymousType make_anonymous_type(const composite::composite& c) {
     auto&         at = c.as<composite::mapping>();
-    AnonymousType r{at.at("type").as<string>()};
+    AnonymousType r{string(type_translate(at.at("type").as<string>()))};
     if(auto it = at.find("optional"); it != at.end()) {
         r.optional = it->second.as<bool>();
     }
@@ -75,12 +93,20 @@ Member from_composite(const composite::composite& n, const unordered_set<string>
         } else if(auto it = float_like.find(type); it != float_like.end()) {
             return make_float_like(name, it->second);
         } else if(type == "string") {
-            return Member{name, "std::string"};
+            return Member{name, string(type_translate(type))};
         } else if(auto it = local_typedefs.find(type); it != local_typedefs.end()) {
             return Member{name, type, optional<string>{}};
         } else if(type == "vector") {
-            Member v{name, "std::vector"};
+            Member v{name, string(type_translate(type))};
             v.value_type = make_anonymous_type(m.at("value_type"));
+            return v;
+        } else if(type == "variant") {
+            Member v{name, string(type_translate(type))};
+            v.value_types.emplace();
+
+            auto& vts = m.at("value_types").as<composite::sequence>();
+            transform(vts.begin(), vts.end(), back_inserter(*v.value_types), make_anonymous_type);
+
             return v;
         } else {
             throw BadDefinition("no such type");

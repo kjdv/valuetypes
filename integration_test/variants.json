@@ -1,0 +1,24 @@
+{
+  "namespace": "vt",
+  "types": [{
+    "name": "Base",
+    "members": [{
+      "name": "n",
+      "type": "int"
+    }]
+  }, {
+    "name": "Variants",
+    "members": [{
+      "name": "v",
+      "type": "variant",
+      "value_types": [{
+        "type": "int"
+      }, {
+        "type": "string"
+      }, {
+        "type": "Base",
+        "optional": true
+      }]
+    }]
+  }]
+}

@@ -227,6 +227,10 @@ struct Struct {
     optional<Nested>      o4;
     optional<vector<int>> o5;
     optional<vector<int>> o6;
+    variant<int, string>  var1;
+    variant<int, string>  var2;
+    optional<variant<int, string>> o7;
+    optional<variant<int, string>> o8;
 };
 
 TEST(parser, read_mapping) {
@@ -249,62 +253,94 @@ TEST(parser, read_mapping) {
         "value": "abc"
     },
     "o5": null,
-    "o6": [4, 5, 6]
+    "o6": [4, 5, 6],
+    "var1": { "int": 789 },
+    "var2": { "string": "ghi" },
+    "o7": null,
+    "o8": { "string": "jkl" }
 })");
     Parser parser(&stream);
     Struct actual;
     parser.read_mapping<Struct>(actual, [](Parser& p, Struct& target, string_view key) {
         if(key == "x") {
-            p.read_scalar<double>(target.x);
+            from_json(p, target.x);
         } else if(key == "y") {
-            p.read_scalar<double>(target.y);
+            from_json(p, target.y);
         } else if(key == "n") {
-            p.read_scalar<int>(target.n);
+            from_json(p, target.n);
         } else if(key == "b1") {
-            p.read_scalar<bool>(target.b1);
+            from_json(p, target.b1);
         } else if(key == "b2") {
-            p.read_scalar<bool>(target.b2);
+            from_json(p, target.b2);
         } else if(key == "s") {
-            p.read_scalar<string>(target.s);
+            from_json(p, target.s);
         } else if(key == "v") {
-            p.read_sequence<vector<int>>(target.v, [](Parser& p2, vector<int>& v) {
-                int i;
-                p2.read_scalar<int>(i);
-                v.push_back(i);
-            });
+            from_json(p, target.v);
         } else if(key == "o1") {
-            p.read_scalar<optional<int>>(target.o1);
+            from_json(p, target.o1);
         } else if(key == "o2") {
-            p.read_scalar<optional<int>>(target.o2);
+            from_json(p, target.o2);
         } else if(key == "nested") {
             p.read_mapping<Nested>(target.nested, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    p2.read_scalar<string>(n.value);
+                    from_json(p2, n.value);
                 }
             });
         } else if(key == "o3") {
             p.read_mapping<optional<Nested>>(target.o3, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    p2.read_scalar<string>(n.value);
+                    from_json(p2, n.value);
                 }
             });
         } else if(key == "o4") {
             p.read_mapping<optional<Nested>>(target.o4, [](Parser& p2, Nested& n, string_view k) {
                 if(k == "value") {
-                    p2.read_scalar<string>(n.value);
+                    from_json(p2, n.value);
                 }
             });
         } else if(key == "o5") {
-            p.read_sequence<optional<vector<int>>>(target.o5, [](Parser& p2, vector<int>& v) {
-                int i;
-                p2.read_scalar<int>(i);
-                v.push_back(i);
-            });
+            from_json(p, target.o5);
         } else if(key == "o6") {
-            p.read_sequence<optional<vector<int>>>(target.o6, [](Parser& p2, vector<int>& v) {
-                int i;
-                p2.read_scalar<int>(i);
-                v.push_back(i);
+            from_json(p, target.o6);
+        } else if (key == "var1") {
+            p.read_mapping<variant<int, string>>(target.var1, [](Parser &p2, variant<int, string> &v, string_view k) {
+               if(k == "int") {
+                   v.emplace<int>();
+                   from_json(p2, get<int>(v));
+               } else if(k == "string") {
+                   v.emplace<string>();
+                   from_json(p2, get<string>(v));
+               }
+            });
+        } else if (key == "var2") {
+            p.read_mapping<variant<int, string>>(target.var2, [](Parser &p2, variant<int, string> &v, string_view k) {
+               if(k == "int") {
+                   v.emplace<int>();
+                   from_json(p2, get<int>(v));
+               } else if(k == "string") {
+                   v.emplace<string>();
+                   from_json(p2, get<string>(v));
+               }
+            });
+        } else if (key == "o7") {
+            p.read_mapping<optional<variant<int, string>>>(target.o7, [](Parser &p2, variant<int, string> &v, string_view k) {
+               if(k == "int") {
+                   v.emplace<int>();
+                   from_json(p2, get<int>(v));
+               } else if(k == "string") {
+                   v.emplace<string>();
+                   from_json(p2, get<string>(v));
+               }
+            });
+        } else if (key == "o8") {
+            p.read_mapping<optional<variant<int, string>>>(target.o8, [](Parser &p2, variant<int, string> &v, string_view k) {
+               if(k == "int") {
+                   v.emplace<int>();
+                   from_json(p2, get<int>(v));
+               } else if(k == "string") {
+                   v.emplace<string>();
+                   from_json(p2, get<string>(v));
+               }
             });
         }
     });
@@ -331,6 +367,11 @@ TEST(parser, read_mapping) {
     EXPECT_FALSE(actual.o5);
     ve = {4, 5, 6};
     EXPECT_EQ(ve, *actual.o6);
+
+    EXPECT_EQ(789, get<int>(actual.var1));
+    EXPECT_EQ("ghi", get<string>(actual.var2));
+    EXPECT_FALSE(actual.o7);
+    EXPECT_EQ("jkl", get<string>(*actual.o8));
 }
 
 ${minijson_definitions}

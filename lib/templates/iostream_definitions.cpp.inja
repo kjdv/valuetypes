@@ -68,16 +68,37 @@ void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
 }
 
 ## for typedef in typedefs
-void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
-    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
+void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
 ## for member in typedef.members
-        {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
-             from_json(p, target.{{member.name}});
-        }
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
+## if member.value_types
+        p.read_mapping<{{ member.type }}>(target.{{ member.name }}, [](minijson::Parser &p2, {{ member.type }} &t, string_view key) {
+## for vt in member.value_types
+            {% if not loop.is_first %}else {% endif %}if(key == "{{ vt.name }}") {
+                t.emplace<{{ vt.type }}>();
+                from_json(p2, std::get<{{ vt.type }}>(t));
+            }
 ## endfor
-        else {
-            throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: ", std::string(key)));
-        }
+        });
+## else
+        from_json(p, target.{{ member.name }});
+## endif
+    }
+## endfor
+    else {
+        throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: ", std::string(key)));
+    }
+}
+
+void from_json(minijson::Parser &p, std::optional<{{ typedef.name}}> &v) {
+    p.read_mapping<std::optional<{{ typedef.name}}>>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, string_view key) {
+        fill_struct(p2, target, key);
+    });
+}
+
+void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
+    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, string_view key) {
+        fill_struct(p2, target, key);
     });
 }
 
@@ -90,7 +111,22 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
     out << "{ ";
 ## for member in typedef.members
     out << quoted("{{ member.name }}") << ": ";
-    to_json(out, v.{{member.name}});
+## if member.value_types
+    out << "{ ";
+    std::visit([&](auto&& item) {
+        using T = std::decay_t<decltype(item)>;
+
+## for vt in member.value_types
+        {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type}}>) {
+            out << quoted("{{ vt.type }}") << ": ";
+            to_json(out, item);
+        }
+## endfor
+    }, v.{{ member.name }});
+    out << " }";
+## else
+    to_json(out, v.{{ member.name }});
+## endif
 {% if not loop.is_last %}    out << ", ";{% endif %}
 ## endfor
     out << " }";
