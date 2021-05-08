@@ -10,3 +10,6 @@ C++ code generator for value types
 - [x] Support for vectors
 - [ ] Self-hosting internal data structures, removing kjson dependency
 - [ ] Support for default values
+- [ ] Human friendly variant keys
+- [ ] Switchable strict/loose json parsing
+- [ ] Tested and improved error readability on non-happy paths
