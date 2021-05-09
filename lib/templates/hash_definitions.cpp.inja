@@ -10,14 +10,14 @@ constexpr std::size_t combine(std::size_t a, std::size_t b) noexcept {
 
 template <typename T>
 constexpr std::size_t base_hash(const T&v) noexcept {
-    hash<T> hasher;
+    std::hash<T> hasher;
     return hasher(v);
 }
 
 template <typename T>
 constexpr std::size_t base_hash(const std::vector<T> &v) noexcept {
     std::size_t h{0};
-    hash<T> ih;
+    std::hash<T> ih;
     for (auto&& item : v) {
         h = combine(h, ih(item));
     }

@@ -1,10 +1,10 @@
 #include "transform.h"
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <iomanip>
-#include <sstream>
 
 namespace valuetypes {
 
@@ -115,17 +115,17 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
     }
 
     auto default_value = member.default_value;
-    if (!default_value && !member.optional) {
-        if (member.type == "bool") {
+    if(!default_value && !member.optional) {
+        if(member.type == "bool") {
             default_value = "false";
-        } else if (auto it = int_like.find(member.type); it != int_like.end()) {
+        } else if(auto it = int_like.find(member.type); it != int_like.end()) {
             default_value = "0";
-        } else if (auto it = float_like.find(member.type); it != float_like.end()) {
+        } else if(auto it = float_like.find(member.type); it != float_like.end()) {
             default_value = "0.0";
         }
     }
 
-    if (default_value && member.type == "string") {
+    if(default_value && member.type == "string") {
         ostringstream stream;
         stream << quoted(*default_value);
         default_value = stream.str();

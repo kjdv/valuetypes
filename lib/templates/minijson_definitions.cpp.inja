@@ -60,24 +60,26 @@ std::string to_string(const token &t) {
     }, t);
 }
 
-string concat() {
+std::string concat() {
     return "";
 }
 
 template <typename Head, typename... Tail>
-string concat(const Head &head, Tail&&... tail) {
-    if constexpr (is_convertible_v<Head, std::string>) {
-        return std::string(head) + concat(forward<Tail>(tail)...);
-    } else if constexpr (is_same_v<std::decay_t<Head>, char>) {
-        return std::string(1, head) + concat(forward<Tail>(tail)...);
+std::string concat(const Head &head, Tail&&... tail) {
+    using std::to_string; 
+
+    if constexpr (std::is_convertible_v<Head, std::string>) {
+        return std::string(head) + concat(std::forward<Tail>(tail)...);
+    } else if constexpr (std::is_same_v<std::decay_t<Head>, char>) {
+        return std::string(1, head) + concat(std::forward<Tail>(tail)...);
     } else {
-        return to_string(head) + concat(forward<Tail>(tail)...);
+        return to_string(head) + concat(std::forward<Tail>(tail)...);
     }
 }   
 
 template <typename T>
 constexpr bool match_token(const token& t) noexcept {
-    return holds_alternative<T>(t);
+    return std::holds_alternative<T>(t);
 }
 
 template <typename T>
@@ -87,54 +89,54 @@ void check_token(const token& t) {
     }
 }
 
-Tokenizer::Tokenizer(istream* stream)
+Tokenizer::Tokenizer(std::istream* stream)
     : d_stream(stream) {
     assert(d_stream);
     advance();
 }
 
 template <typename T, typename F>
-void Parser::read_mapping(enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
+void Parser::read_mapping(std::enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
     check_token<start_mapping_token>(d_tok.current());
     d_tok.advance();
 
-    read_members(target, forward<F>(consume));
+    read_members(target, std::forward<F>(consume));
 
     check_token<end_mapping_token>(d_tok.current());
     d_tok.advance();
 }
 
 template <typename T, typename F>
-void Parser::read_mapping(enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
+void Parser::read_mapping(std::enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
         target.reset();
     } else {
         target = typename T::value_type{};
-        read_mapping<typename T::value_type>(*target, forward<F>(consume));
+        read_mapping<typename T::value_type>(*target, std::forward<F>(consume));
     }
 }
 
 template <typename T, typename F>
-void Parser::read_sequence(enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
+void Parser::read_sequence(std::enable_if_t<!is_optional_v<T>, T> &target, F&& consume) {
     check_token<start_sequence_token>(d_tok.current());
     d_tok.advance();
 
     target.clear();
-    read_elements(target, forward<F>(consume));
+    read_elements(target, std::forward<F>(consume));
 
     check_token<end_sequence_token>(d_tok.current());
     d_tok.advance();
 }
 
 template <typename T, typename F>
-void Parser::read_sequence(enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
+void Parser::read_sequence(std::enable_if_t<is_optional_v<T>, T> &target, F&& consume) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
         target.reset();
     } else {
         target = typename T::value_type{};
-        read_sequence<typename T::value_type>(*target, forward<F>(consume));
+        read_sequence<typename T::value_type>(*target, std::forward<F>(consume));
     }
 }
 
@@ -145,7 +147,7 @@ bool Parser::is_eof() const noexcept {
 template <typename T, typename F>
 void Parser::read_members(T& target, F&& consume) {
     while(match_token<string_token>(d_tok.current())) {
-        read_kvpair(target, forward<F>(consume));
+        read_kvpair(target, std::forward<F>(consume));
 
         if(match_token<separator_token>(d_tok.current())) {
             d_tok.advance();
@@ -158,7 +160,7 @@ void Parser::read_members(T& target, F&& consume) {
 template <typename T, typename F>
 void Parser::read_kvpair(T& target, F&& consume) {
     check_token<string_token>(d_tok.current());
-    string key = get<string_token>(d_tok.current()).value;
+    std::string key = std::get<string_token>(d_tok.current()).value;
 
     check_token<mapper_token>(d_tok.advance());
     d_tok.advance();
@@ -181,12 +183,12 @@ void Parser::read_elements(T& target, F&& consume) {
 
 template <typename T, typename Tok>
 void extract(const token& tok, T &target) {
-    istringstream istream(get<Tok>(tok).value);
+    std::istringstream istream(std::get<Tok>(tok).value);
     istream >> target;
 }
 
 template <typename T>
-void read_actual_scalar(const token& tok, enable_if_t<is_same_v<bool, T>, T> &target) {
+void read_actual_scalar(const token& tok, std::enable_if_t<std::is_same_v<bool, T>, T> &target) {
     if(match_token<true_token>(tok)) {
         target = true;
     } else if(match_token<false_token>(tok)) {
@@ -197,7 +199,7 @@ void read_actual_scalar(const token& tok, enable_if_t<is_same_v<bool, T>, T> &ta
 }
 
 template <typename T>
-void read_actual_scalar(const token& tok, enable_if_t<is_floating_point_v<T>, T> &target) {
+void read_actual_scalar(const token& tok, std::enable_if_t<std::is_floating_point_v<T>, T> &target) {
     if(match_token<float_token>(tok)) {
         extract<T, float_token>(tok, target);
     } else if(match_token<int_token>(tok)) {
@@ -208,16 +210,16 @@ void read_actual_scalar(const token& tok, enable_if_t<is_floating_point_v<T>, T>
 }
 
 template <typename T>
-void read_actual_scalar(const token& tok, enable_if_t<is_integral_v<T> && !is_same_v<bool, T>, T> &target) {
+void read_actual_scalar(const token& tok, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<bool, T>, T> &target) {
     check_token<int_token>(tok);
     extract<T, int_token>(tok, target);
 }
 
 template <typename T>
-void read_actual_scalar(const token& tok, enable_if_t<is_same_v<string, T>, T> &target) {
+void read_actual_scalar(const token& tok, std::enable_if_t<std::is_same_v<std::string, T>, T> &target) {
     // other scalar types can easily be converted into strings
     if (match_token<string_token>(tok)) {
-        target = get<string_token>(tok).value;
+        target = std::get<string_token>(tok).value;
     } else if (match_token<true_token>(tok)) {
         target = "true";
     } else if (match_token<false_token>(tok)) {
@@ -225,22 +227,22 @@ void read_actual_scalar(const token& tok, enable_if_t<is_same_v<string, T>, T> &
     } else if (match_token<null_token>(tok)) {
         target = "null";
     } else if (match_token<int_token>(tok)) {
-        target = get<int_token>(tok).value;
+        target = std::get<int_token>(tok).value;
     } else if (match_token<float_token>(tok)) {
-        target = get<float_token>(tok).value;
+        target = std::get<float_token>(tok).value;
     } else {
         check_token<string_token>(tok);
     }
 }
 
 template <typename T>
-void Parser::read_scalar(enable_if_t<!is_optional_v<T>, T> &target) {
+void Parser::read_scalar(std::enable_if_t<!is_optional_v<T>, T> &target) {
     read_actual_scalar<T>(d_tok.current(), target);
     d_tok.advance();
 }
 
 template <typename T>
-void Parser::read_scalar(enable_if_t<is_optional_v<T>, T> &target) {
+void Parser::read_scalar(std::enable_if_t<is_optional_v<T>, T> &target) {
     if(match_token<null_token>(d_tok.current())) {
         d_tok.advance();
         target.reset();
@@ -250,9 +252,9 @@ void Parser::read_scalar(enable_if_t<is_optional_v<T>, T> &target) {
     }
 }
 
-const int eof = char_traits<char>::eof();
+const int eof = std::char_traits<char>::eof();
 
-int non_ws(istream& str) noexcept {
+int non_ws(std::istream& str) noexcept {
     char c = 0;
     while(str.get(c)) {
         if(!isspace(c))
@@ -261,7 +263,7 @@ int non_ws(istream& str) noexcept {
     return eof;
 }
 
-void extract_literal(istream& input, string_view tail) {
+void extract_literal(std::istream& input, std::string_view tail) {
     for(char e : tail) {
         int c = input.get();
         if(c != e)
@@ -269,12 +271,12 @@ void extract_literal(istream& input, string_view tail) {
     }
 }
 
-token extract_number(istream& input, char head) noexcept {
+token extract_number(std::istream& input, char head) noexcept {
     bool is_float  = false;
     bool had_point = false;
     bool had_exp   = false;
 
-    string value;
+    std::string value;
     value += head;
 
     int c;
@@ -326,7 +328,7 @@ uint8_t single_decode(char h) noexcept {
     return 0;
 }
 
-string extract_utf8(istream& input) {
+std::string extract_utf8(std::istream& input) {
     char32_t wc = 0;
     for(size_t i = 0; i < 4; ++i) {
         int c = input.get();
@@ -340,7 +342,7 @@ string extract_utf8(istream& input) {
         wc |= single_decode((char)c);
     }
 
-    string value;
+    std::string value;
 
     char byte;
 
@@ -362,8 +364,8 @@ string extract_utf8(istream& input) {
     return value;
 }
 
-string_token extract_string(istream& input) {
-    string value;
+string_token extract_string(std::istream& input) {
+    std::string value;
 
     int c;
     while((c = input.get()) != eof && c != '"') {

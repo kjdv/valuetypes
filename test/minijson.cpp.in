@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 #include <optional>
+#include <vector>
 #include <type_traits>
 
 namespace {
@@ -21,46 +22,45 @@ constexpr bool is_optional_v = is_optional<T>::value;
 
 ${minijson_declarations}
 
-using namespace std;
 using namespace minijson;
 
 template <typename T>
-void from_json(minijson::Parser &p, T &v) {
+void from_json(Parser &p, T &v) {
     p.read_scalar<T>(v);
 }
 
 template <typename T>
-void from_json(minijson::Parser &p, std::vector<T> &v) {
-    p.read_sequence<std::vector<T>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+void from_json(Parser &p, std::vector<T> &v) {
+    p.read_sequence<std::vector<T>>(v, [](Parser &p2, std::vector<T> &target) {
         target.emplace_back();
         from_json(p2, target.back());
     });
 }
 
 template <typename T>
-void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
-    p.read_sequence<std::optional<std::vector<T>>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
+void from_json(Parser &p, std::optional<std::vector<T>> &v) {
+    p.read_sequence<std::optional<std::vector<T>>>(v, [](Parser &p2, std::vector<T> &target) {
         target.emplace_back();
         from_json(p2, target.back());
     });
 }
 
 struct tokenizer_testcase {
-    string        input;
-    vector<token> tokens;
+    std::string        input;
+    std::vector<token> tokens;
 };
 
 class tokenizer_test : public testing::TestWithParam<tokenizer_testcase> {
 };
 
-string token_s(const token& t) {
-    return visit([&](auto&& arg) {
-        using T = decay_t<decltype(arg)>;
-        if constexpr(is_same_v<T, string_token>) {
+std::string token_s(const token& t) {
+    return std::visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr(std::is_same_v<T, string_token>) {
             return arg.value;
-        } else if constexpr(is_same_v<T, int_token>) {
+        } else if constexpr(std::is_same_v<T, int_token>) {
             return arg.value;
-        } else if constexpr(is_same_v<T, float_token>) {
+        } else if constexpr(std::is_same_v<T, float_token>) {
             return arg.value;
         } else {
             return std::to_string(t.index());
@@ -72,7 +72,7 @@ string token_s(const token& t) {
 TEST_P(tokenizer_test, tokens) {
     auto testcase = GetParam();
 
-    istringstream stream(testcase.input);
+    std::istringstream stream(testcase.input);
     Tokenizer     tok(&stream);
 
     for(auto&& expected : testcase.tokens) {
@@ -138,7 +138,7 @@ INSTANTIATE_TEST_SUITE_P(test_tokenizer,
                          testing::ValuesIn(tokenizer_testcases));
 
 TEST(tokenizer, invalid_utf8) {
-    stringstream stream("\"\\ug582\"");
+    std::stringstream stream("\"\\ug582\"");
     try {
         Tokenizer tok(&stream);
         FAIL();
@@ -148,7 +148,7 @@ TEST(tokenizer, invalid_utf8) {
 }
 
 TEST(tokenizer, bad_literal) {
-    stringstream stream("trfalse");
+    std::stringstream stream("trfalse");
     try {
         Tokenizer tok(&stream);
         FAIL();
@@ -158,7 +158,7 @@ TEST(tokenizer, bad_literal) {
 }
 
 TEST(tokenizer, bad_token) {
-    stringstream stream("!");
+    std::stringstream stream("!");
     try {
         Tokenizer tok(&stream);
         FAIL();
@@ -195,7 +195,7 @@ TEST(badjson, exception_formatting) {
         EXPECT_STREQ("expected a number, got {", e.what());
     }
     try {
-        try_parse<optional<int>>("nufl");
+        try_parse<std::optional<int>>("nufl");
         FAIL() << "expected an exception";
     } catch (const BadJson &e) {
         EXPECT_STREQ("unexpected char in literal, expected l, got f", e.what());
@@ -209,7 +209,7 @@ TEST(badjson, exception_formatting) {
 }
 
 struct Nested {
-    string value;
+    std::string value;
 };
 
 struct Struct {
@@ -218,23 +218,23 @@ struct Struct {
     int                   n{0};
     bool                  b1{false};
     bool                  b2{true};
-    string                s;
-    vector<int>           v;
-    optional<int>         o1;
-    optional<int>         o2;
+    std::string                s;
+    std::vector<int>           v;
+    std::optional<int>         o1;
+    std::optional<int>         o2;
     Nested                nested;
-    optional<Nested>      o3;
-    optional<Nested>      o4;
-    optional<vector<int>> o5;
-    optional<vector<int>> o6;
-    variant<int, string>  var1;
-    variant<int, string>  var2;
-    optional<variant<int, string>> o7;
-    optional<variant<int, string>> o8;
+    std::optional<Nested>      o3;
+    std::optional<Nested>      o4;
+    std::optional<std::vector<int>> o5;
+    std::optional<std::vector<int>> o6;
+    std::variant<int, std::string>  var1;
+    std::variant<int, std::string>  var2;
+    std::optional<std::variant<int, std::string>> o7;
+    std::optional<std::variant<int, std::string>> o8;
 };
 
 TEST(parser, read_mapping) {
-    stringstream stream(R"(
+    std::stringstream stream(R"(
 {
     "x": 3.14,
     "y": 2.72,
@@ -261,7 +261,7 @@ TEST(parser, read_mapping) {
 })");
     Parser parser(&stream);
     Struct actual;
-    parser.read_mapping<Struct>(actual, [](Parser& p, Struct& target, string_view key) {
+    parser.read_mapping<Struct>(actual, [](Parser& p, Struct& target, std::string_view key) {
         if(key == "x") {
             from_json(p, target.x);
         } else if(key == "y") {
@@ -281,19 +281,19 @@ TEST(parser, read_mapping) {
         } else if(key == "o2") {
             from_json(p, target.o2);
         } else if(key == "nested") {
-            p.read_mapping<Nested>(target.nested, [](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<Nested>(target.nested, [](Parser& p2, Nested& n, std::string_view k) {
                 if(k == "value") {
                     from_json(p2, n.value);
                 }
             });
         } else if(key == "o3") {
-            p.read_mapping<optional<Nested>>(target.o3, [](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<std::optional<Nested>>(target.o3, [](Parser& p2, Nested& n, std::string_view k) {
                 if(k == "value") {
                     from_json(p2, n.value);
                 }
             });
         } else if(key == "o4") {
-            p.read_mapping<optional<Nested>>(target.o4, [](Parser& p2, Nested& n, string_view k) {
+            p.read_mapping<std::optional<Nested>>(target.o4, [](Parser& p2, Nested& n, std::string_view k) {
                 if(k == "value") {
                     from_json(p2, n.value);
                 }
@@ -303,43 +303,43 @@ TEST(parser, read_mapping) {
         } else if(key == "o6") {
             from_json(p, target.o6);
         } else if (key == "var1") {
-            p.read_mapping<variant<int, string>>(target.var1, [](Parser &p2, variant<int, string> &v, string_view k) {
+            p.read_mapping<std::variant<int, std::string>>(target.var1, [](Parser &p2, std::variant<int, std::string> &v, std::string_view k) {
                if(k == "int") {
                    v.emplace<int>();
-                   from_json(p2, get<int>(v));
+                   from_json(p2, std::get<int>(v));
                } else if(k == "string") {
-                   v.emplace<string>();
-                   from_json(p2, get<string>(v));
+                   v.emplace<std::string>();
+                   from_json(p2, std::get<std::string>(v));
                }
             });
         } else if (key == "var2") {
-            p.read_mapping<variant<int, string>>(target.var2, [](Parser &p2, variant<int, string> &v, string_view k) {
+            p.read_mapping<std::variant<int, std::string>>(target.var2, [](Parser &p2, std::variant<int, std::string> &v, std::string_view k) {
                if(k == "int") {
                    v.emplace<int>();
-                   from_json(p2, get<int>(v));
+                   from_json(p2, std::get<int>(v));
                } else if(k == "string") {
-                   v.emplace<string>();
-                   from_json(p2, get<string>(v));
+                   v.emplace<std::string>();
+                   from_json(p2, std::get<std::string>(v));
                }
             });
         } else if (key == "o7") {
-            p.read_mapping<optional<variant<int, string>>>(target.o7, [](Parser &p2, variant<int, string> &v, string_view k) {
+            p.read_mapping<std::optional<std::variant<int, std::string>>>(target.o7, [](Parser &p2, std::variant<int, std::string> &v, std::string_view k) {
                if(k == "int") {
                    v.emplace<int>();
-                   from_json(p2, get<int>(v));
+                   from_json(p2, std::get<int>(v));
                } else if(k == "string") {
-                   v.emplace<string>();
-                   from_json(p2, get<string>(v));
+                   v.emplace<std::string>();
+                   from_json(p2, std::get<std::string>(v));
                }
             });
         } else if (key == "o8") {
-            p.read_mapping<optional<variant<int, string>>>(target.o8, [](Parser &p2, variant<int, string> &v, string_view k) {
+            p.read_mapping<std::optional<std::variant<int, std::string>>>(target.o8, [](Parser &p2, std::variant<int, std::string> &v, std::string_view k) {
                if(k == "int") {
                    v.emplace<int>();
-                   from_json(p2, get<int>(v));
+                   from_json(p2, std::get<int>(v));
                } else if(k == "string") {
-                   v.emplace<string>();
-                   from_json(p2, get<string>(v));
+                   v.emplace<std::string>();
+                   from_json(p2, std::get<std::string>(v));
                }
             });
         }
@@ -354,11 +354,11 @@ TEST(parser, read_mapping) {
     EXPECT_FALSE(actual.b2);
     EXPECT_EQ("abc", actual.s);
 
-    vector<int> ve{1, 2, 3};
+    std::vector<int> ve{1, 2, 3};
     EXPECT_EQ(ve, actual.v);
 
-    EXPECT_EQ(optional<int>(), actual.o1);
-    EXPECT_EQ(optional<int>(456), actual.o2);
+    EXPECT_EQ(std::optional<int>(), actual.o1);
+    EXPECT_EQ(std::optional<int>(456), actual.o2);
 
     EXPECT_EQ("def", actual.nested.value);
     EXPECT_FALSE(actual.o3);
@@ -368,10 +368,10 @@ TEST(parser, read_mapping) {
     ve = {4, 5, 6};
     EXPECT_EQ(ve, *actual.o6);
 
-    EXPECT_EQ(789, get<int>(actual.var1));
-    EXPECT_EQ("ghi", get<string>(actual.var2));
+    EXPECT_EQ(789, std::get<int>(actual.var1));
+    EXPECT_EQ("ghi", std::get<std::string>(actual.var2));
     EXPECT_FALSE(actual.o7);
-    EXPECT_EQ("jkl", get<string>(*actual.o8));
+    EXPECT_EQ("jkl", std::get<std::string>(*actual.o8));
 }
 
 ${minijson_definitions}

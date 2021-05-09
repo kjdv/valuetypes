@@ -30,8 +30,7 @@ inja::Environment make_env() {
     return env;
 }
 
-std::string_view cmakelists() noexcept
-{
+std::string_view cmakelists() noexcept {
     return "add_library({{ options.library_name }} {{ options.base_filename }}.h {{ options.base_filename }}.cpp)\n";
 }
 

@@ -6,7 +6,7 @@ namespace {
 {% include "minijson_declarations" %}
 
 template <typename T>
-void to_json(ostream &out, const T &v) {
+void to_json(std::ostream &out, const T &v) {
     using U = std::decay_t<T>;
 
     if constexpr (is_optional_v<U>) {
@@ -18,14 +18,14 @@ void to_json(ostream &out, const T &v) {
         return;
     }
 
-    if constexpr (is_same_v<U, bool>) {
-        out << boolalpha << v;
-    } else if constexpr (is_floating_point_v<U>) {
-        out << setprecision(18) << v;
-    } else if constexpr (is_integral_v<U>) {
+    if constexpr (std::is_same_v<U, bool>) {
+        out << std::boolalpha << v;
+    } else if constexpr (std::is_floating_point_v<U>) {
+        out << std::setprecision(18) << v;
+    } else if constexpr (std::is_integral_v<U>) {
         out << v;
-    } else if constexpr (is_same_v<U, string>) {
-        out << quoted(v);
+    } else if constexpr (std::is_same_v<U, std::string>) {
+        out << std::quoted(v);
     } else if constexpr (is_vector_v<U>) {
         out << "[ ";
         bool first = true;
@@ -68,11 +68,11 @@ void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
 }
 
 ## for typedef in typedefs
-void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, string_view key) {
+void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, std::string_view key) {
 ## for member in typedef.members
     {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
 ## if member.value_types
-        p.read_mapping<{{ member.type }}>(target.{{ member.name }}, [](minijson::Parser &p2, {{ member.type }} &t, string_view key) {
+        p.read_mapping<{{ member.type }}>(target.{{ member.name }}, [](minijson::Parser &p2, {{ member.type }} &t, std::string_view key) {
 ## for vt in member.value_types
             {% if not loop.is_first %}else {% endif %}if(key == "{{ vt.name }}") {
                 t.emplace<{{ vt.type }}>();
@@ -91,13 +91,13 @@ void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, string_view ke
 }
 
 void from_json(minijson::Parser &p, std::optional<{{ typedef.name}}> &v) {
-    p.read_mapping<std::optional<{{ typedef.name}}>>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, string_view key) {
+    p.read_mapping<std::optional<{{ typedef.name}}>>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, std::string_view key) {
         fill_struct(p2, target, key);
     });
 }
 
 void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
-    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, string_view key) {
+    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, std::string_view key) {
         fill_struct(p2, target, key);
     });
 }
@@ -110,7 +110,7 @@ void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
 void to_json(std::ostream& out, const {{typedef.name }} &v) {
     out << "{ ";
 ## for member in typedef.members
-    out << quoted("{{ member.name }}") << ": ";
+    out << std::quoted("{{ member.name }}") << ": ";
 ## if member.value_types
     out << "{ ";
     std::visit([&](auto&& item) {
@@ -118,7 +118,7 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
 
 ## for vt in member.value_types
         {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type}}>) {
-            out << quoted("{{ vt.type }}") << ": ";
+            out << std::quoted("{{ vt.type }}") << ": ";
             to_json(out, item);
         }
 ## endfor
@@ -132,7 +132,7 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
     out << " }";
 }
 
-void from_json(istream& in, {{ typedef.name }} &v) {
+void from_json(std::istream& in, {{ typedef.name }} &v) {
     minijson::Parser parser(&in);
     from_json(parser, v);
 }
@@ -146,12 +146,12 @@ namespace {
 namespace std {
 
 ## for typedef in typedefs
-ostream &operator<<(ostream& out, const {{typedef.namespace_name }} &v) {
+std::ostream &operator<<(std::ostream& out, const {{typedef.namespace_name }} &v) {
     {{ namespace }}::to_json(out, v);
     return out;
 }
 
-istream &operator>>(istream& in, {{ typedef.namespace_name }} &v) {
+std::istream &operator>>(std::istream& in, {{ typedef.namespace_name }} &v) {
     {{ namespace }}::from_json(in, v);
     return in;
 }
