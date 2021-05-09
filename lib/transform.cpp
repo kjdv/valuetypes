@@ -103,8 +103,12 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
         std::transform(member.value_types->begin(), member.value_types->end(), back_inserter(vts), [&](auto&& item) {
             Variables j;
             auto      n = real_type(item, local_typedefs);
-            j["name"]   = n;
             j["type"]   = n;
+            if (item.name) {
+                j["name"] = *item.name;
+            } else {
+                j["name"] = n;
+            }
 
             return j;
         });

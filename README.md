@@ -11,7 +11,7 @@ C++ code generator for value types
 - [x] Self-hosting internal data structures, removing kjson dependency
 - [x] CMakeFiles.txt generation
 - [x] Support for default values
-- [ ] Human friendly variant keys
+- [x] Human friendly variant keys
 - [ ] Switchable strict/loose json parsing
 - [ ] Tested and improved error readability on non-happy paths
 - [ ] Selective generation, not all definitions need all headers and code snippets

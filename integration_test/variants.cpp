@@ -118,7 +118,7 @@ TEST(Variants, insertion2) {
     v.v.emplace<string>("abc");
 
     stream << v;
-    EXPECT_EQ(R"({ "v": { "std::string": "abc" } })", stream.str());
+    EXPECT_EQ(R"({ "v": { "custom_str": "abc" } })", stream.str());
 }
 
 TEST(Variants, insertion3) {

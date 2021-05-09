@@ -118,7 +118,7 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
 
 ## for vt in member.value_types
         {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type}}>) {
-            out << std::quoted("{{ vt.type }}") << ": ";
+            out << std::quoted("{{ vt.name }}") << ": ";
             to_json(out, item);
         }
 ## endfor

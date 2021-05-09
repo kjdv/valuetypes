@@ -8,6 +8,10 @@
         }, {
             "name": "optional",
             "type": "bool"
+        }, {
+            "name": "name",
+            "type": "string",
+            "optional": true
         }]
     }, {
         "name": "Member",

@@ -14,7 +14,8 @@
       "value_types": [{
         "type": "int"
       }, {
-        "type": "string"
+        "type": "string",
+        "name": "custom_str"
       }, {
         "type": "Base",
         "optional": true
