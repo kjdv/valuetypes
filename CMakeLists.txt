@@ -21,12 +21,4 @@ add_subdirectory(test)
 add_subdirectory(integration_test)
 
 # install rules
-install(TARGETS valuetypes
-        EXPORT ValuetypesTargets
-        ARCHIVE DESTINATION lib COMPONENT lib
-        PUBLIC_HEADER DESTINATION include/valuetypes COMPONENT dev
-)
-install(FILES ValuetypesConfig.cmake DESTINATION share/valuetypes)
-
-install(EXPORT ValuetypesTargets DESTINATION share/valuetypes NAMESPACE Valuetypes::)
-export(TARGETS valuetypes NAMESPACE Valuetypes:: FILE ${CMAKE_CURRENT_BINARY_DIR}/ValuetypesTargets.cmake)
+install(TARGETS valuetypes)
