@@ -44,3 +44,4 @@ constexpr bool is_vector_v = is_vector<T>::value;
 
 {% include "iostream_definitions" %}
 {% include "hash_definitions" %}
+{% include "swap_definitions" %}

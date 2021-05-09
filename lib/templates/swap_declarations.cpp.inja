@@ -1,0 +1,7 @@
+namespace std {
+
+## for typedef in typedefs
+void swap({{typedef.namespace_name}} &a, {{typedef.namespace_name}} &b) noexcept;
+
+## endfor
+} // namespace std

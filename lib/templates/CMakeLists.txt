@@ -13,6 +13,8 @@ set(template_sources
     ${CMAKE_CURRENT_BINARY_DIR}/iostream_definitions.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/minijson_declarations.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/minijson_definitions.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/swap_declarations.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/swap_definitions.cpp
 )
 
 function(generate_template name)
@@ -32,6 +34,8 @@ generate_template(iostream_declarations)
 generate_template(iostream_definitions)
 generate_template(minijson_declarations)
 generate_template(minijson_definitions)
+generate_template(swap_declarations)
+generate_template(swap_definitions)
 
 add_library(templates ${template_sources})
 target_include_directories(templates

@@ -85,6 +85,16 @@ TEST(Vectors, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(v2));
 }
 
+TEST(Vectors, swappable) {
+    vt::Vectors v1;
+    vt::Vectors v2{{1, 2, 3}};
+
+    std::swap(v1, v2);
+
+    const std::vector<int> expect{1, 2, 3};
+    EXPECT_EQ(expect, v1.v);
+}
+
 TEST(Vectors, insertion) {
     std::stringstream stream;
     vt::Vectors       v{{1, 2, 3}};

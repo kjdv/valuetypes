@@ -1,0 +1,15 @@
+// start swap_definitions.cpp.inja
+
+namespace std {
+
+## for typedef in typedefs
+void swap({{typedef.namespace_name}} &a, {{typedef.namespace_name}} &b) noexcept {
+## for member in typedef.members
+    swap(a.{{member.name}}, b.{{member.name}});
+## endfor
+}
+
+## endfor
+} // namespace std
+
+// end swap_definitions.cpp.inja

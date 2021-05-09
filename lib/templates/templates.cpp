@@ -26,6 +26,8 @@ inja::Environment make_env() {
     include_template(env, "hash_definitions", hash_definitions());
     include_template(env, "iostream_declarations", iostream_declarations());
     include_template(env, "iostream_definitions", iostream_definitions());
+    include_template(env, "swap_declarations", swap_declarations());
+    include_template(env, "swap_definitions", swap_definitions());
 
     return env;
 }
