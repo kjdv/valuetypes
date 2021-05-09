@@ -2,7 +2,7 @@ function(generate_value_type name)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.h ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cpp
             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/${name}.json
-            COMMAND valuetypes --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.json
+            COMMAND valuetypes --permissive-json --output ${CMAKE_CURRENT_BINARY_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.json
             DEPENDS valuetypes
     )
    

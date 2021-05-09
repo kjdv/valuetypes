@@ -140,6 +140,23 @@ void Parser::read_sequence(std::enable_if_t<is_optional_v<T>, T> &target, F&& co
     }
 }
 
+void Parser::skip() {
+    if (match_token<start_mapping_token>(d_tok.current())) {
+        struct dummy{};
+        dummy sink;
+        read_mapping<dummy>(sink, [](Parser &p, dummy &, std::string_view) {
+           p.skip();
+        });
+    } else if (match_token<start_sequence_token>(d_tok.current())) {
+        std::vector<int> sink;
+        read_sequence<std::vector<int>>(sink, [](Parser &p, std::vector<int> &) {
+           p.skip();
+        });
+    } else {
+        d_tok.advance();
+    }
+}
+
 bool Parser::is_eof() const noexcept {
     return match_token<eof_token>(d_tok.current());
 }

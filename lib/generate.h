@@ -10,6 +10,7 @@ struct Options {
     std::filesystem::path input_file;
     std::filesystem::path output_dir;
     std::filesystem::path base_filename;
+    bool                  permissive_json{false};
 };
 
 void generate(const Options& opts);

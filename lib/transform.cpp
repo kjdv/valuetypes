@@ -104,7 +104,7 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
             Variables j;
             auto      n = real_type(item, local_typedefs);
             j["type"]   = n;
-            if (item.name) {
+            if(item.name) {
                 j["name"] = *item.name;
             } else {
                 j["name"] = n;

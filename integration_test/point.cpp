@@ -102,6 +102,19 @@ TEST(Point, insertion) {
     EXPECT_EQ(R"({ "x": 1, "y": 3.14000000000000012 })", stream.str());
 }
 
+TEST(Point, permissiveExtraction) {
+    std::stringstream stream(R"({
+   "x": 1,
+   "y": 2,
+   "z": 3
+})");
+    vt::Point         p;
+    stream >> p;
+
+    EXPECT_EQ(1.0, p.x);
+    EXPECT_EQ(2.0, p.y);
+}
+
 RC_GTEST_PROP(Point, marshalling, (double x, double y)) {
     vt::Point p1{x, y};
 

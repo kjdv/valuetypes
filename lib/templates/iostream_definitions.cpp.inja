@@ -79,6 +79,13 @@ void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, std::string_vi
                 from_json(p2, std::get<{{ vt.type }}>(t));
             }
 ## endfor
+            else {
+## if options.permissive_json
+                 p2.skip();
+## else
+                 throw minijson::BadJson(minijson::concat("unexpected key in variant of type {{ typedef.name}}: ", std::string(key)));
+## endif
+            }
         });
 ## else
         from_json(p, target.{{ member.name }});
@@ -86,7 +93,11 @@ void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, std::string_vi
     }
 ## endfor
     else {
+## if options.permissive_json
+        p.skip();
+## else
         throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: ", std::string(key)));
+## endif
     }
 }
 

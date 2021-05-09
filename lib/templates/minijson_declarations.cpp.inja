@@ -80,6 +80,8 @@ class Parser {
     template <typename T>
     void read_scalar(std::enable_if_t<is_optional_v<T>, T> &target);
 
+    void skip(); // discard the current token and advance. If this is the start of a mapping or sequence, discard it entirely
+
     bool is_eof() const noexcept;
 
   private:

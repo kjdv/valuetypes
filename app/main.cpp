@@ -14,6 +14,7 @@ int main(int argc, char** argv) {
                 ("f,filename", "Base filename (without extention) for the generated files",
                  cxxopts::value<std::string>()->default_value("valuetypes"))
                 ("c,cmake", "Generate CMakeLists.txt")
+                ("p,permissive-json", "Generate permissive json parsers, this can be useful for value types that have to be forward- or backward-compatible")
                 ("input", "Input file containing type definitions",
                  cxxopts::value<std::string>())
                 ("h,help", "Print help message");
@@ -38,7 +39,8 @@ int main(int argc, char** argv) {
             static_cast<bool>(results.count("cmake")),
             results["input"].as<std::string>(),
             results["output"].as<std::string>(),
-            results["filename"].as<std::string>()};
+            results["filename"].as<std::string>(),
+            static_cast<bool>(results.count("permissive-json"))};
 
         valuetypes::generate(generate_options);
 

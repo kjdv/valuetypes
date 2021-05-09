@@ -13,6 +13,6 @@ const char templ[] = R"raw(${content})raw";
 std::string_view ${name}() noexcept {
     return templ;
 }
- 
+
 } // namespace templates
 } // namespace valuetypes
