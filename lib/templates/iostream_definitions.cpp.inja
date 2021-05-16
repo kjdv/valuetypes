@@ -4,20 +4,48 @@
 namespace {
 
 template <typename T>
+struct is_optional : std::false_type
+{};
+
+template <typename T>
+struct is_optional<std::optional<T>> : std::true_type
+{};
+
+template <typename T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+template <typename T>
 kjson::document convert(const T &v) {
-    return kjson::document(v);
+    if constexpr (is_optional_v<T>) {
+        if (v) {
+            return kjson::document{};
+        } else {
+            return convert(*v);
+        }
+    } else {
+        return kjson::document(v);
+    }
 }
 
 template <typename T>
 void convert(const kjson::document &doc, T &target) {
-    target = doc.to<T>();
+    if constexpr (is_optional_v<T>) {
+        if (doc.is<composite::none>()) {
+            target.reset();
+        } else {
+            target.emplace();
+            convert<typename T::value_type>(doc, *target);
+        }
+    } else {
+        target = doc.to<T>();
+    }
 }
 
 ## for typedef in typedefs
 kjson::document convert(const {{ typedef.name }} &v) {
     return composite::make_mapping(
 ## for member in typedef.members
-        "{{ member.name }}", v.{{ member.name}}{% if not loop.is_last %},{% endif %}
+        "{{ member.name }}", convert(v.{{ member.name}}){% if not loop.is_last %},{% endif %}
 ## endfor
     );
 }

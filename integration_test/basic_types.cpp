@@ -28,12 +28,19 @@ TEST(BasicTypes, constructWithDefaults) {
 }
 
 TEST(BasicTypes, json) {
-    ostringstream stream;
-    BasicTypes    bt{};
-    stream << bt;
+    istringstream stream(R"({
+    "truth": true,
+    "n": 1,
+    "x": 2.0,
+    "s": "abc"
+})");
+    BasicTypes bt;
+    stream >> bt;
 
-    auto expect = R"({ "truth": false, "n": 0, "x": 0, "s": "" })";
-    EXPECT_EQ(expect, stream.str());
+    EXPECT_EQ(true, bt.truth);
+    EXPECT_EQ(1, bt.n);
+    EXPECT_EQ(2.0, bt.x);
+    EXPECT_EQ("abc", bt.s);
 }
 
 RC_GTEST_PROP(BasicTypes, hashing, (bool truth1, int n1, double x1, string s1, bool truth2, int n2, double x2, string s2)) {
