@@ -10,15 +10,7 @@ kjson::document convert(const T &v) {
 
 template <typename T>
 void convert(const kjson::document &doc, T &target) {
-    if constexpr (std::is_floating_point_v<T>) {
-        if (doc.is<composite::int_t>()) {
-            target = static_cast<T>(doc.as<composite::int_t>());
-        } else {
-            target = doc.as<T>();
-        }
-    } else {
-        target = doc.as<T>();
-    }
+    target = doc.to<T>();
 }
 
 ## for typedef in typedefs
