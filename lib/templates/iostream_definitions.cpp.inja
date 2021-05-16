@@ -3,114 +3,40 @@
 {% if namespace %}namespace {{ namespace }} { {% endif %}
 namespace {
 
-{% include "minijson_declarations" %}
+template <typename T>
+kjson::document convert(const T &v) {
+    return kjson::document(v);
+}
 
 template <typename T>
-void to_json(std::ostream &out, const T &v) {
-    using U = std::decay_t<T>;
-
-    if constexpr (is_optional_v<U>) {
-        if (!v) {
-            out << "null";
+void convert(const kjson::document &doc, T &target) {
+    if constexpr (std::is_floating_point_v<T>) {
+        if (doc.is<composite::int_t>()) {
+            target = static_cast<T>(doc.as<composite::int_t>());
         } else {
-            to_json(out, *v);
+            target = doc.as<T>();
         }
-        return;
-    }
-
-    if constexpr (std::is_same_v<U, bool>) {
-        out << std::boolalpha << v;
-    } else if constexpr (std::is_floating_point_v<U>) {
-        out << std::setprecision(18) << v;
-    } else if constexpr (std::is_integral_v<U>) {
-        out << v;
-    } else if constexpr (std::is_same_v<U, std::string>) {
-        out << std::quoted(v);
-    } else if constexpr (is_vector_v<U>) {
-        out << "[ ";
-        bool first = true;
-        for (auto&& item : v) {
-            if (!first) {
-                out << ", ";
-            }
-            to_json(out, item);
-            first = false;
-        }
-        out << " ]";
     } else {
-        assert(false && "implement me");
+        target = doc.as<T>();
     }
 }
 
 ## for typedef in typedefs
-void from_json(minijson::Parser &p, {{ typedef.name}} &v);
-## endfor
-
-template <typename T>
-void from_json(minijson::Parser &p, T &v) {
-    p.read_scalar<T>(v);
-}
-
-template <typename T>
-void from_json(minijson::Parser &p, std::vector<T> &v) {
-    p.read_sequence<std::vector<T>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
-        target.emplace_back();
-        from_json(p2, target.back());
-    });
-}
-
-template <typename T>
-void from_json(minijson::Parser &p, std::optional<std::vector<T>> &v) {
-    p.read_sequence<std::optional<std::vector<T>>>(v, [](minijson::Parser &p2, std::vector<T> &target) {
-        target.emplace_back();
-        from_json(p2, target.back());
-    });
-}
-
-## for typedef in typedefs
-void fill_struct(minijson::Parser &p, {{ typedef.name }}& target, std::string_view key) {
+kjson::document convert(const {{ typedef.name }} &v) {
+    return composite::make_mapping(
 ## for member in typedef.members
-    {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
-## if member.value_types
-        p.read_mapping<{{ member.type }}>(target.{{ member.name }}, [](minijson::Parser &p2, {{ member.type }} &t, std::string_view key) {
-## for vt in member.value_types
-            {% if not loop.is_first %}else {% endif %}if(key == "{{ vt.name }}") {
-                t.emplace<{{ vt.type }}>();
-                from_json(p2, std::get<{{ vt.type }}>(t));
-            }
+        "{{ member.name }}", v.{{ member.name}}{% if not loop.is_last %},{% endif %}
 ## endfor
-            else {
-## if options.permissive_json
-                 p2.skip();
-## else
-                 throw minijson::BadJson(minijson::concat("unexpected key in variant of type {{ typedef.name}}: ", std::string(key)));
-## endif
-            }
-        });
-## else
-        from_json(p, target.{{ member.name }});
-## endif
-    }
-## endfor
-    else {
-## if options.permissive_json
-        p.skip();
-## else
-        throw minijson::BadJson(minijson::concat("unexpected key in struct of type {{ typedef.name}}: ", std::string(key)));
-## endif
-    }
+    );
 }
 
-void from_json(minijson::Parser &p, std::optional<{{ typedef.name}}> &v) {
-    p.read_mapping<std::optional<{{ typedef.name}}>>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, std::string_view key) {
-        fill_struct(p2, target, key);
-    });
-}
-
-void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
-    p.read_mapping<{{ typedef.name }}>(v, [](minijson::Parser &p2, {{ typedef.name }}& target, std::string_view key) {
-        fill_struct(p2, target, key);
-    });
+void convert(const kjson::document &doc, {{ typedef.name}} &target) {
+    auto &m = doc.as<composite::mapping>();
+## for member in typedef.members
+    if (auto it = m.find("{{ member.name}}"); it != m.end()) {
+        convert(it->second, target.{{ member.name }});
+    }
+## endfor
 }
 
 ## endfor
@@ -119,39 +45,16 @@ void from_json(minijson::Parser &p, {{ typedef.name}} &v) {
 
 ## for typedef in typedefs
 void to_json(std::ostream& out, const {{typedef.name }} &v) {
-    out << "{ ";
-## for member in typedef.members
-    out << std::quoted("{{ member.name }}") << ": ";
-## if member.value_types
-    out << "{ ";
-    std::visit([&](auto&& item) {
-        using T = std::decay_t<decltype(item)>;
-
-## for vt in member.value_types
-        {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type}}>) {
-            out << std::quoted("{{ vt.name }}") << ": ";
-            to_json(out, item);
-        }
-## endfor
-    }, v.{{ member.name }});
-    out << " }";
-## else
-    to_json(out, v.{{ member.name }});
-## endif
-{% if not loop.is_last %}    out << ", ";{% endif %}
-## endfor
-    out << " }";
+    auto doc = convert(v);
+    kjson::dump(doc, out);
 }
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {
-    minijson::Parser parser(&in);
-    from_json(parser, v);
+    auto doc = kjson::load(in).expect("invalid json");
+    convert(doc, v);
 }
 
 ## endfor
-namespace {
-{% include "minijson_definitions" %}
-} // anonymous namespace
 } // {% if namespace %}namespace {{ namespace }}{% endif %}
 
 namespace std {

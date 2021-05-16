@@ -8,40 +8,20 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+## if options.json
+#include <kjson/json.hh>
+#include <composite/make.hh>
+## endif
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
-
-namespace {
-
-template <typename T>
-struct is_optional: std::false_type
-{};
-
-template <typename T>
-struct is_optional<std::optional<T>>: std::true_type
-{};
-
-template <typename T>
-constexpr bool is_optional_v = is_optional<T>::value;
-
-template <typename T>
-struct is_vector: std::false_type
-{};
-
-template <typename T>
-struct is_vector<std::vector<T>>: std::true_type
-{};
-
-template <typename T>
-constexpr bool is_vector_v = is_vector<T>::value;
-
-} // anonymous namespace
 
 {% include "equality_definitions" %}
 {% include "comparison_definitions" %}
 
 } // {% if namespace %}} // namespace {{ namespace }}{% endif %}
 
+## if options.json
 {% include "iostream_definitions" %}
+## endif
 {% include "hash_definitions" %}
 {% include "swap_definitions" %}
