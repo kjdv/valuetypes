@@ -14,6 +14,8 @@ int main(int argc, char** argv) {
                 ("f,filename", "Base filename (without extention) for the generated files",
                  cxxopts::value<std::string>()->default_value("valuetypes"))
                 ("c,cmake", "Generate CMakeLists.txt")
+                ("j,json", "Enable json (de)serialisation and iostream operations. This introduces a dependency on KJson (https://github.com/kjdv/kjson)",
+                 cxxopts::value<bool>()->default_value("false"))
                 ("p,permissive-json", "Generate permissive json parsers, this can be useful for value types that have to be forward- or backward-compatible")
                 ("input", "Input file containing type definitions",
                  cxxopts::value<std::string>())
@@ -40,7 +42,8 @@ int main(int argc, char** argv) {
             results["input"].as<std::string>(),
             results["output"].as<std::string>(),
             results["filename"].as<std::string>(),
-            static_cast<bool>(results.count("permissive-json"))};
+            static_cast<bool>(results.count("permissive-json")),
+            static_cast<bool>(results.count("json"))};
 
         valuetypes::generate(generate_options);
 

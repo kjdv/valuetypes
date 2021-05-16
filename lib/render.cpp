@@ -42,6 +42,7 @@ Variables opts_to_vars(const Options& opts) {
     d["library_name"]    = is_valid ? libname : string(opts.base_filename);
     d["base_filename"]   = opts.base_filename;
     d["permissive_json"] = opts.permissive_json;
+    d["json"] = opts.json;
 
     return d;
 }
