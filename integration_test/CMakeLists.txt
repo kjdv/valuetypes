@@ -18,7 +18,7 @@ generate_value_type(basic_types)
 generate_value_type(optionals)
 generate_value_type(structs)
 generate_value_type(vectors)
-#generate_value_type(variants)
+generate_value_type(variants)
 
 set(sources
     point.cpp
@@ -29,14 +29,14 @@ set(sources
     variants.cpp
 )
 
-add_executable(integration_test point.cpp basic_types.cpp optionals.cpp structs.cpp vectors.cpp) #${sources})
+add_executable(integration_test ${sources})
 target_link_libraries(integration_test
     point
     basic_types
     optionals
     structs
     vectors
-#    variants
+    variants
     ${GMOCK_LIBRARIES}
     GTest::GTest
     GTest::Main

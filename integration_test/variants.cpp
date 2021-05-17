@@ -103,40 +103,36 @@ TEST(Variants, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(v2));
 }
 
-TEST(Variants, insertion1) {
-    std::stringstream stream;
+TEST(Variants, extraction1) {
+    std::stringstream stream(R"({ "v": { "int": 123 } })");
     vt::Variants      v;
-    v.v.emplace<int>(123);
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": { "int": 123 } })", stream.str());
+    stream >> v;
+    EXPECT_EQ(123, std::get<int>(v.v));
 }
 
-TEST(Variants, insertion2) {
-    std::stringstream stream;
+TEST(Variants, extraction2) {
+    std::stringstream stream(R"({ "v": { "custom_str": "abc" } })");
     vt::Variants      v;
-    v.v.emplace<string>("abc");
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": { "custom_str": "abc" } })", stream.str());
+    stream >> v;
+    EXPECT_EQ("abc", std::get<std::string>(v.v));
 }
 
-TEST(Variants, insertion3) {
-    std::stringstream stream;
+TEST(Variants, extraction3) {
+    std::stringstream stream(R"({ "v": { "std::optional<Base>": null } })");
     vt::Variants      v;
-    v.v.emplace<optional<vt::Base>>();
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": { "std::optional<Base>": null } })", stream.str());
+    stream >> v;
+    EXPECT_FALSE(std::get<std::optional<vt::Base>>(v.v));
 }
 
-TEST(Variants, insertion4) {
-    std::stringstream stream;
+TEST(Variants, extraction4) {
+    std::stringstream stream(R"({ "v": { "std::optional<Base>": { "n": 123 } } })");
     vt::Variants      v;
-    v.v.emplace<optional<vt::Base>>(vt::Base{123});
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": { "std::optional<Base>": { "n": 123 } } })", stream.str());
+    stream >> v;
+    EXPECT_EQ(123, std::get<std::optional<vt::Base>>(v.v)->n);
 }
 
 RC_GTEST_PROP(Variants, marshalling, (int n, string s, int c)) {
