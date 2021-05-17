@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <algorithm>
 ## if options.json
 #include <kjson/json.hh>
 #include <composite/make.hh>

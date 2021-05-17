@@ -15,6 +15,23 @@ template <typename T>
 constexpr bool is_optional_v = is_optional<T>::value;
 
 template <typename T>
+struct is_vector : std::false_type
+{};
+
+template <typename T>
+struct is_vector<std::vector<T>> : std::true_type
+{};
+
+template <typename T>
+constexpr bool is_vector_v = is_vector<T>::value;
+
+## for typedef in typedefs
+kjson::document to_kjson(const {{ typedef.name }} &v);
+void from_kjson(const kjson::document &doc, {{ typedef.name}} &target);
+
+## endfor
+
+template <typename T>
 kjson::document to_kjson(const T &v) {
     if constexpr (is_optional_v<T>) {
         if (!v) {
@@ -22,6 +39,11 @@ kjson::document to_kjson(const T &v) {
         } else {
             return to_kjson(*v);
         }
+    } else if constexpr (is_vector_v<T>) {
+        auto seq = composite::sequence();
+        seq.reserve(v.size());
+        std::transform(v.begin(), v.end(), std::back_inserter(seq), [](auto&& item) { return to_kjson(item); });
+        return kjson::document(std::move(seq));
     } else {
         return kjson::document(v);
     }
@@ -36,6 +58,16 @@ void from_kjson(const kjson::document &doc, T &target) {
             target.emplace();
             from_kjson<typename T::value_type>(doc, *target);
         }
+    } else if constexpr (is_vector_v<T>) {
+        using U = typename T::value_type;
+
+        target.clear();
+        auto& as_seq = doc.as<composite::sequence>();
+        std::transform(as_seq.begin(), as_seq.end(), std::back_inserter(target), [](auto&& item){
+            U v{};
+            from_kjson(item, v);
+            return v;
+        });
     } else {
         target = doc.to<T>();
     }
