@@ -13,6 +13,5 @@ target_include_directories(valuetypes_common
 )
 
 target_link_libraries(valuetypes_common
-    PUBLIC templates definitions Kjson::kjson
+    PUBLIC templates definitions
 )
-

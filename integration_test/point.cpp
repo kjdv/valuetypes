@@ -99,7 +99,7 @@ TEST(Point, extraction) {
     "x": 1,
     "y": 3.14
 })");
-    vt::Point p;
+    vt::Point         p;
 
     stream >> p;
     EXPECT_EQ(1.0, p.x);
@@ -130,4 +130,3 @@ RC_GTEST_PROP(Point, marshalling, (double x, double y)) {
 
     RC_ASSERT(p1 == p2);
 }
-

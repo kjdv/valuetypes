@@ -124,3 +124,15 @@ struct hash<valuetypes::DefinitionStore> {
 };
 
 } // namespace std
+
+namespace std {
+
+void swap(valuetypes::TemplateParameter& a, valuetypes::TemplateParameter& b) noexcept;
+
+void swap(valuetypes::Member& a, valuetypes::Member& b) noexcept;
+
+void swap(valuetypes::Definition& a, valuetypes::Definition& b) noexcept;
+
+void swap(valuetypes::DefinitionStore& a, valuetypes::DefinitionStore& b) noexcept;
+
+} // namespace std

@@ -34,7 +34,7 @@ TEST(BasicTypes, json) {
     "x": 2.0,
     "s": "abc"
 })");
-    BasicTypes bt;
+    BasicTypes    bt;
     stream >> bt;
 
     EXPECT_EQ(true, bt.truth);
