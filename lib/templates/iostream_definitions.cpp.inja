@@ -15,12 +15,12 @@ template <typename T>
 constexpr bool is_optional_v = is_optional<T>::value;
 
 template <typename T>
-kjson::document convert(const T &v) {
+kjson::document to_kjson(const T &v) {
     if constexpr (is_optional_v<T>) {
-        if (v) {
+        if (!v) {
             return kjson::document{};
         } else {
-            return convert(*v);
+            return to_kjson(*v);
         }
     } else {
         return kjson::document(v);
@@ -28,13 +28,13 @@ kjson::document convert(const T &v) {
 }
 
 template <typename T>
-void convert(const kjson::document &doc, T &target) {
+void from_kjson(const kjson::document &doc, T &target) {
     if constexpr (is_optional_v<T>) {
         if (doc.is<composite::none>()) {
             target.reset();
         } else {
             target.emplace();
-            convert<typename T::value_type>(doc, *target);
+            from_kjson<typename T::value_type>(doc, *target);
         }
     } else {
         target = doc.to<T>();
@@ -42,19 +42,19 @@ void convert(const kjson::document &doc, T &target) {
 }
 
 ## for typedef in typedefs
-kjson::document convert(const {{ typedef.name }} &v) {
+kjson::document to_kjson(const {{ typedef.name }} &v) {
     return composite::make_mapping(
 ## for member in typedef.members
-        "{{ member.name }}", convert(v.{{ member.name}}){% if not loop.is_last %},{% endif %}
+        "{{ member.name }}", to_kjson(v.{{ member.name}}){% if not loop.is_last %},{% endif %}
 ## endfor
     );
 }
 
-void convert(const kjson::document &doc, {{ typedef.name}} &target) {
+void from_kjson(const kjson::document &doc, {{ typedef.name}} &target) {
     auto &m = doc.as<composite::mapping>();
 ## for member in typedef.members
     if (auto it = m.find("{{ member.name}}"); it != m.end()) {
-        convert(it->second, target.{{ member.name }});
+        from_kjson(it->second, target.{{ member.name }});
     }
 ## endfor
 }
@@ -65,13 +65,13 @@ void convert(const kjson::document &doc, {{ typedef.name}} &target) {
 
 ## for typedef in typedefs
 void to_json(std::ostream& out, const {{typedef.name }} &v) {
-    auto doc = convert(v);
+    auto doc = to_kjson(v);
     kjson::dump(doc, out);
 }
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {
     auto doc = kjson::load(in).expect("invalid json");
-    convert(doc, v);
+    from_kjson(doc, v);
 }
 
 ## endfor
