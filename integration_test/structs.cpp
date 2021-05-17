@@ -88,12 +88,14 @@ TEST(Structs, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(c2));
 }
 
-TEST(Structs, insertion) {
-    std::stringstream stream;
-    vt::Compound      c{vt::Nested{"abc"}, vt::Nested{"def"}};
+TEST(Structs, extraction) {
+    std::stringstream stream(R"({ "a": { "s": "abc" }, "b": { "s": "def" } })");
+    vt::Compound      c;
 
-    stream << c;
-    EXPECT_EQ(R"({ "a": { "s": "abc" }, "b": { "s": "def" } })", stream.str());
+    stream >> c;
+
+    EXPECT_EQ("abc", c.a.s);
+    EXPECT_EQ("def", c.b.s);
 }
 
 RC_GTEST_PROP(Structs, marshalling, (string a, string b)) {
