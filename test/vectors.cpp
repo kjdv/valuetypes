@@ -95,28 +95,32 @@ TEST(Vectors, swappable) {
     EXPECT_EQ(expect, v1.v);
 }
 
-TEST(Vectors, insertion) {
-    std::stringstream stream;
-    vt::Vectors       v{{1, 2, 3}};
+TEST(Vectors, extraction) {
+    std::stringstream stream(R"({ "v": [ 1, 2, 3 ] })");
+    vt::Vectors       v;
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": [ 1, 2, 3 ] })", stream.str());
+    stream >> v;
+
+    vector<int> e{1, 2, 3};
+    EXPECT_EQ(e, v.v);
 }
 
-TEST(Vectors, optionalInsertion1) {
-    std::stringstream   stream;
+TEST(Vectors, optionalExtraction1) {
+    std::stringstream   stream(R"({ "v": null })");
     vt::OptionalVectors v;
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": null })", stream.str());
+    stream >> v;
+    EXPECT_FALSE(v.v);
 }
 
-TEST(Vectors, optionalInsertion2) {
-    std::stringstream   stream;
-    vt::OptionalVectors v{optional<vector<optional<int>>>{{1, optional<int>{}, 3}}};
+TEST(Vectors, optionalExtraction2) {
+    std::stringstream   stream(R"({ "v": [ 1, null, 3 ] })");
+    vt::OptionalVectors v;
 
-    stream << v;
-    EXPECT_EQ(R"({ "v": [ 1, null, 3 ] })", stream.str());
+    stream >> v;
+
+    vector<optional<int>> e{1, optional<int>{}, 3};
+    EXPECT_EQ(e, *v.v);
 }
 
 RC_GTEST_PROP(Vectors, marshalling, (vector<int> a)) {

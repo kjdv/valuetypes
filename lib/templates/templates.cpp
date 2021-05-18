@@ -16,8 +16,6 @@ inja::Environment make_env() {
     inja::Environment env;
     env.set_search_included_templates_in_files(false);
 
-    include_template(env, "minijson_declarations", minijson_declarations());
-    include_template(env, "minijson_definitions", minijson_definitions());
     include_template(env, "comparison_declarations", comparison_declarations());
     include_template(env, "comparison_definitions", comparison_definitions());
     include_template(env, "equality_declarations", equality_declarations());
@@ -33,7 +31,13 @@ inja::Environment make_env() {
 }
 
 std::string_view cmakelists() noexcept {
-    return "add_library({{ options.library_name }} {{ options.base_filename }}.h {{ options.base_filename }}.cpp)\n";
+    return R"(add_library({{ options.library_name }} {{ options.base_filename }}.h {{ options.base_filename }}.cpp)
+
+## if options.json
+find_package(Kjson CONFIG REQUIRED)
+target_link_libraries({{ options.library_name }} PRIVATE Kjson::kjson)
+## endif
+)";
 }
 
 } // namespace templates

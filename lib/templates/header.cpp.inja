@@ -22,6 +22,8 @@ struct {{ typedef.name }} {
 {% include "comparison_declarations" %}
 {% if namespace %}} // namespace {{ namespace }}{% endif %}
 
+## if options.json
 {% include "iostream_declarations" %}
+## endif
 {% include "hash_declarations" %}
 {% include "swap_declarations" %}

@@ -94,12 +94,16 @@ TEST(Point, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(p2));
 }
 
-TEST(Point, insertion) {
-    std::stringstream stream;
-    vt::Point         p{1.0, 3.14};
+TEST(Point, extraction) {
+    std::stringstream stream(R"({
+    "x": 1,
+    "y": 3.14
+})");
+    vt::Point         p;
 
-    stream << p;
-    EXPECT_EQ(R"({ "x": 1, "y": 3.14000000000000012 })", stream.str());
+    stream >> p;
+    EXPECT_EQ(1.0, p.x);
+    EXPECT_EQ(3.14, p.y);
 }
 
 TEST(Point, permissiveExtraction) {

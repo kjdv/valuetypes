@@ -26,14 +26,17 @@ TEST(Optionals, construction) {
 }
 
 TEST(Optionals, json) {
-    ostringstream stream;
-    Optionals     o1{};
-    Optionals     o2{true, 1, 2.0, "abc"};
+    istringstream stream1(R"({ "b": null, "n": null, "x": null, "s": null })");
+    istringstream stream2(R"({ "b": true, "n": 1, "x": 2, "s": "abc" })");
+    Optionals     e1{};
+    Optionals     e2{true, 1, 2.0, "abc"};
 
-    stream << "[ " << o1 << ", " << o2 << " ]";
+    Optionals a1{true}, a2;
+    stream1 >> a1;
+    stream2 >> a2;
 
-    auto expect = R"([ { "b": null, "n": null, "x": null, "s": null }, { "b": true, "n": 1, "x": 2, "s": "abc" } ])";
-    EXPECT_EQ(expect, stream.str());
+    EXPECT_EQ(e1, a1);
+    EXPECT_EQ(e2, a2);
 }
 
 TEST(BasicTypes, hashing) {
@@ -66,7 +69,7 @@ TEST(BasicTypes, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(o2));
 }
 
-RC_GTEST_PROP(BasicTypes, marshalling, (bool b, int n, double x, string s, int coin)) {
+RC_GTEST_PROP(Optionals, marshalling, (bool b, int n, double x, string s, int coin)) {
     Optionals o1;
     if(coin & 1) {
         o1.b = b;
