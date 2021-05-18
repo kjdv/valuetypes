@@ -16,8 +16,6 @@ inja::Environment make_env() {
     inja::Environment env;
     env.set_search_included_templates_in_files(false);
 
-    include_template(env, "minijson_declarations", minijson_declarations());
-    include_template(env, "minijson_definitions", minijson_definitions());
     include_template(env, "comparison_declarations", comparison_declarations());
     include_template(env, "comparison_definitions", comparison_definitions());
     include_template(env, "equality_declarations", equality_declarations());
