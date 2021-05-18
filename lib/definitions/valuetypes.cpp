@@ -1,9 +1,6 @@
 #include "valuetypes.h"
 #include <cassert>
-#include <iomanip>
-#include <iostream>
 #include <optional>
-#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>
