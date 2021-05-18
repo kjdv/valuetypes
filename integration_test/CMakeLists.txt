@@ -19,9 +19,20 @@ generate_value_type(structs)
 generate_value_type(vectors)
 generate_value_type(variants)
 
-file(GLOB sources *.h *.cpp)
+set(sources
+    point.cpp
+    basic_types.cpp
+    optionals.cpp
+    structs.cpp
+    vectors.cpp
+    variants.cpp
+)
 
 add_executable(integration_test ${sources})
 target_link_libraries(integration_test point basic_types optionals structs vectors variants ${GMOCK_LIBRARIES} GTest::GTest GTest::Main rapidcheck)
 
 gtest_discover_tests(integration_test)
+
+add_executable(benchmarks benchmarks.cpp)
+target_link_libraries(benchmarks PUBLIC basic_types structs variants benchmark::benchmark benchmark::benchmark_main)
+add_test(benchmarks.test benchmarks)

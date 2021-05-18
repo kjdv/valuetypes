@@ -14,6 +14,7 @@ enable_testing()
 
 find_package(inja CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
+find_package(benchmark CONFIG REQUIRED)
 
 add_subdirectory(lib)
 add_subdirectory(app)
