@@ -26,26 +26,27 @@ template <typename T>
 constexpr bool is_vector_v = is_vector<T>::value;
 
 ## for typedef in typedefs
-kjson::document to_kjson(const {{ typedef.name }} &v);
+void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v);
 void from_kjson(const kjson::document &doc, {{ typedef.name}} &target);
 
 ## endfor
 
 template <typename T>
-kjson::document to_kjson(const T &v) {
+void to_kjson(kjson::builder &builder, const T &v) {
     if constexpr (is_optional_v<T>) {
         if (!v) {
-            return kjson::document{};
+            builder.with_none();
         } else {
-            return to_kjson(*v);
+            to_kjson(builder, *v);
         }
     } else if constexpr (is_vector_v<T>) {
-        auto seq = composite::sequence();
-        seq.reserve(v.size());
-        std::transform(v.begin(), v.end(), std::back_inserter(seq), [](auto&& item) { return to_kjson(item); });
-        return kjson::document(std::move(seq));
+        builder.push_sequence();
+        for (auto&& item : v) {
+            to_kjson(builder, item);
+        }
+        builder.pop();
     } else {
-        return kjson::document(v);
+        builder.value(v);
     }
 }
 
@@ -74,27 +75,29 @@ void from_kjson(const kjson::document &doc, T &target) {
 }
 
 ## for typedef in typedefs
-kjson::document to_kjson(const {{ typedef.name }} &v) {
-    return composite::make_mapping(
+void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v) {
+    builder.push_mapping();
 ## for member in typedef.members
 ## if member.value_types
-        "{{ member.name }}", std::visit([](auto&& item) {
+    builder.key("{{ member.name }}");
+    builder.push_mapping();
+    std::visit([&builder](auto&& item) {
             using T = std::decay_t<decltype(item)>;
 
-            composite::mapping m;
 ## for vt in member.value_types
             {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type }}>) {
-                m.emplace(std::make_pair("{{ vt.name }}", to_kjson(item)));
+                builder.key("{{ vt.name }}");
+                to_kjson(builder, item);
             }
 ## endfor
-
-            return kjson::document{std::move(m)};
-        }, v.{{ member.name}}){% if not loop.is_last %},{% endif %}
+    }, v.{{ member.name}});
+    builder.pop();
 ## else
-        "{{ member.name }}", to_kjson(v.{{ member.name}}){% if not loop.is_last %},{% endif %}
+    builder.key("{{ member.name }}");
+    to_kjson(builder, v.{{ member.name }});
 ## endif 
 ## endfor
-    );
+    builder.pop();
 }
 
 void from_kjson(const kjson::document &doc, {{ typedef.name}} &target) {
@@ -122,8 +125,8 @@ void from_kjson(const kjson::document &doc, {{ typedef.name}} &target) {
 
 ## for typedef in typedefs
 void to_json(std::ostream& out, const {{typedef.name }} &v) {
-    auto doc = to_kjson(v);
-    kjson::dump(doc, out);
+    kjson::builder builder(out, true);
+    to_kjson(builder, v);
 }
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {

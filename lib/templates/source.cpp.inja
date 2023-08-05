@@ -8,6 +8,7 @@
 #include <algorithm>
 ## if options.json
 #include <kjson/json.hh>
+#include <kjson/builder.hh>
 #include <composite/make.hh>
 ## endif
 
