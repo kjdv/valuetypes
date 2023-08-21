@@ -29,6 +29,11 @@ set(sources
     structs.cpp
     vectors.cpp
     variants.cpp
+    # scratchpad is a pseudo-test, meant to manually develop code before
+    # writing a template
+    scratchpad.cpp
+    scratchpad/valuetypes.h
+    scratchpad/valuetypes.cpp
 )
 
 add_executable(valuetypes_test ${sources})
