@@ -27,8 +27,6 @@ constexpr bool is_vector_v = is_vector<T>::value;
 
 ## for typedef in typedefs
 void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v);
-void from_kjson(const kjson::document &doc, {{ typedef.name}} &target);
-
 ## endfor
 
 template <typename T>
@@ -50,29 +48,96 @@ void to_kjson(kjson::builder &builder, const T &v) {
     }
 }
 
-template <typename T>
-void from_kjson(const kjson::document &doc, T &target) {
-    if constexpr (is_optional_v<T>) {
-        if (doc.is<composite::none>()) {
-            target.reset();
+template <typename To>
+To kjson_extract(kjson::scalar_t v) {
+    return std::visit([](auto&& value) -> To {
+        using From = decltype(value);
+        if constexpr(std::is_convertible_v<From, To>) {
+            return value;
         } else {
-            target.emplace();
-            from_kjson(doc, *target);
+            throw std::runtime_error("cannot convert");
         }
-    } else if constexpr (is_vector_v<T>) {
-        using U = typename T::value_type;
-
-        target.clear();
-        auto& as_seq = doc.as<composite::sequence>();
-        std::transform(as_seq.begin(), as_seq.end(), std::back_inserter(target), [](auto&& item){
-            U v{};
-            from_kjson(item, v);
-            return v;
-        });
-    } else {
-        target = doc.to<T>();
-    }
+    }, v);
 }
+
+template <typename To>
+void from_kjson(To& target, kjson::scalar_t v) {
+    target = kjson_extract<To>(std::move(v));
+}
+
+// reading from json as a state machine, where the state is defined by the target structure
+class populate_state {
+public:
+    virtual ~populate_state() = default;
+
+    virtual void scalar(std::string_view key, kjson::scalar_t v) = 0;
+
+    // return value indicates the next state
+    virtual std::unique_ptr<populate_state> push_mapping(std::string_view key) = 0;
+};
+
+// forward state declarations:
+## for typedef in typedefs
+class {{ typedef.name }}_populate_state : public populate_state {
+public:
+    {{ typedef.name}}_populate_state({{ typedef.name }} &target);
+    
+    void scalar(std::string_view key, kjson::scalar_t v) override;
+    std::unique_ptr<populate_state> push_mapping(std::string_view key) override;
+private:
+    {{ typedef.name }} &d_target;
+};
+
+## endfor
+
+template <typename Initial, typename Target>
+class populate_state_machine : public kjson::visitor {
+public:
+    populate_state_machine(Target &target) : d_target(target) 
+    {}
+
+    void scalar(kjson::scalar_t v) override {
+        assert(false && "implement me");
+    }
+
+    void scalar(std::string_view key, kjson::scalar_t v) override {
+        state().scalar(key, std::move(v));
+    }
+
+    void push_sequence() override {
+        assert(false && "implement me");
+    }
+
+    void push_sequence(std::string_view key) override {
+        assert(false && "implement me");
+    }
+
+    void push_mapping() override {
+        if (d_states.empty()) {
+            d_states.push(std::make_unique<Initial>(d_target));
+        } else {
+            assert(false && "implement me");
+        }
+    }
+    void push_mapping(std::string_view key) override {
+        auto next = state().push_mapping(key);
+        d_states.push(std::move(next));
+    }
+
+    void pop() override {
+        assert(!d_states.empty());
+        d_states.pop();
+    }
+
+  private:
+    populate_state& state() {
+        assert(!d_states.empty());
+        return *d_states.top();
+    }
+
+    Target &d_target;
+    std::stack<std::unique_ptr<populate_state>> d_states;
+};
 
 ## for typedef in typedefs
 void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v) {
@@ -100,23 +165,20 @@ void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v) {
     builder.pop();
 }
 
-void from_kjson(const kjson::document &doc, {{ typedef.name}} &target) {
-    auto& m = doc.as<composite::mapping>();
+{{ typedef.name }}_populate_state::{{ typedef.name}}_populate_state({{ typedef.name }} &target)
+    : d_target(target)
+    {}
+    
+void {{ typedef.name }}_populate_state::scalar(std::string_view key, kjson::scalar_t v) {
 ## for member in typedef.members
-    if (auto it = m.find("{{ member.name}}"); it != m.end()) {
-## if member.value_types
-        auto& v = it->second.as<composite::mapping>();
-## for vt in member.value_types
-        {% if not loop.is_first %}else {% endif %} if(auto it2 = v.find("{{ vt.name }}"); it2 != v.end()) {
-            auto& t = target.{{ member.name }}.emplace<{{ vt.type }}>();
-            from_kjson(it2->second, t);
-        }
-## endfor
-## else
-        from_kjson(it->second, target.{{ member.name }});
-## endif
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
+        from_kjson(d_target.{{ member.name }}, std::move(v));
     }
 ## endfor
+}
+
+std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_mapping(std::string_view key) {
+    return nullptr;
 }
 
 ## endfor
@@ -130,8 +192,8 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
 }
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {
-    auto doc = kjson::load(in).expect("invalid json");
-    from_kjson(doc, v);
+    populate_state_machine<{{ typedef.name }}_populate_state, {{typedef.name}}> visitor(v);
+    kjson::load(in, visitor).expect("invalid json");
 }
 
 ## endfor

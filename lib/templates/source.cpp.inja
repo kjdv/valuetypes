@@ -7,9 +7,10 @@
 #include <variant>
 #include <algorithm>
 ## if options.json
+#include <stack>
 #include <kjson/json.hh>
 #include <kjson/builder.hh>
-#include <composite/make.hh>
+#include <kjson/visitor.hh>
 ## endif
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}
