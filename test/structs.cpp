@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <rapidcheck/gtest.h>
+#include <sstream>
 #include <structs/valuetypes.h>
 #include <unordered_set>
 
@@ -88,6 +89,15 @@ TEST(Structs, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(c2));
 }
 
+TEST(Structs, insertion) {
+    std::stringstream stream;
+
+    vt::Compound c{vt::Nested{"abc"}, vt::Nested{"def"}};
+    stream << c;
+
+    EXPECT_EQ(R"({"a":{"s":"abc"},"b":{"s":"def"}})", stream.str());
+}
+
 TEST(Structs, extraction) {
     std::stringstream stream(R"({ "a": { "s": "abc" }, "b": { "s": "def" } })");
     vt::Compound      c;
@@ -99,7 +109,7 @@ TEST(Structs, extraction) {
 }
 
 RC_GTEST_PROP(Structs, marshalling, (string a, string b)) {
-    vt::Compound c1{vt::Nested{move(a)}, vt::Nested{move(b)}};
+    vt::Compound c1{vt::Nested{std::move(a)}, vt::Nested{std::move(b)}};
 
     std::stringstream stream;
     stream << c1;

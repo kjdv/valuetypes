@@ -51,9 +51,11 @@ void to_kjson(kjson::builder &builder, const T &v) {
 template <typename To>
 To kjson_extract(kjson::scalar_t v) {
     return std::visit([](auto&& value) -> To {
-        using From = decltype(value);
+        using From = std::decay_t<decltype(value)>;
         if constexpr(std::is_convertible_v<From, To>) {
             return value;
+        } else if constexpr (is_optional_v<To> && std::is_same_v<From, kjson::none>) {
+            return std::nullopt;
         } else {
             throw std::runtime_error("cannot convert");
         }
@@ -76,6 +78,13 @@ public:
     virtual std::unique_ptr<populate_state> push_mapping(std::string_view key) = 0;
 };
 
+template <typename T>
+struct populate_trait {
+    static std::unique_ptr<populate_state> make_state(auto&& target) {
+        throw std::runtime_error("conversion error - target is not a recognized struct");
+    }
+};
+
 // forward state declarations:
 ## for typedef in typedefs
 class {{ typedef.name }}_populate_state : public populate_state {
@@ -88,6 +97,13 @@ private:
     {{ typedef.name }} &d_target;
 };
 
+template <>
+struct populate_trait<{{ typedef.name }}_populate_state> {
+    static std::unique_ptr<populate_state> make_state(auto&& target) {
+        return std::make_unique<{{ typedef.name }}_populate_state>(std::forward(target));
+    }
+};
+
 ## endfor
 
 template <typename Initial, typename Target>
@@ -97,7 +113,7 @@ public:
     {}
 
     void scalar(kjson::scalar_t v) override {
-        assert(false && "implement me");
+        // assert(false && "implement me");
     }
 
     void scalar(std::string_view key, kjson::scalar_t v) override {
@@ -105,18 +121,18 @@ public:
     }
 
     void push_sequence() override {
-        assert(false && "implement me");
+        // assert(false && "implement me");
     }
 
     void push_sequence(std::string_view key) override {
-        assert(false && "implement me");
+        // assert(false && "implement me");
     }
 
     void push_mapping() override {
         if (d_states.empty()) {
             d_states.push(std::make_unique<Initial>(d_target));
         } else {
-            assert(false && "implement me");
+           // assert(false && "implement me");
         }
     }
     void push_mapping(std::string_view key) override {
@@ -177,7 +193,12 @@ void {{ typedef.name }}_populate_state::scalar(std::string_view key, kjson::scal
 ## endfor
 }
 
-std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_mapping(std::string_view key) {
+std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_mapping(std::string_view key)   {
+## for member in typedef.members
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
+        return populate_trait<{{ member.type }}>::make_state(d_target.{{ member.name }});
+    }
+## endfor
     return nullptr;
 }
 
