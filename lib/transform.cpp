@@ -97,6 +97,7 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
 
     vars["name"] = member.name;
     vars["type"] = real_type(member, local_typedefs);
+    vars["optional"] = member.optional;
 
     if(member.value_types) {
         vector<Variables> vts;
@@ -116,6 +117,12 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
         vars["value_types"] = vts;
     } else {
         vars["value_types"] = nullptr;
+    }
+
+    if (member.value_type) {
+        vars["value_type"] = real_type(*member.value_type, local_typedefs);
+    } else {
+        vars["value_type"] = nullptr;
     }
 
     auto default_value = member.default_value;

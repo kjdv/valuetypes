@@ -51,8 +51,8 @@ RC_GTEST_PROP(Vectors, totalOrdering, (vector<int> a, vector<int> b)) {
 }
 
 RC_GTEST_PROP(Vectors, hashing, (vector<int> a, vector<int> b)) {
-    vt::Vectors v1{move(a)};
-    vt::Vectors v2{move(b)};
+    vt::Vectors v1{std::move(a)};
+    vt::Vectors v2{std::move(b)};
 
     auto h1 = std::hash<vt::Vectors>{}(v1);
     auto h2 = std::hash<vt::Vectors>{}(v2);
@@ -124,7 +124,7 @@ TEST(Vectors, optionalExtraction2) {
 }
 
 RC_GTEST_PROP(Vectors, marshalling, (vector<int> a)) {
-    vt::Vectors v1{move(a)};
+    vt::Vectors v1{std::move(a)};
 
     std::stringstream stream;
     stream << v1;
@@ -148,6 +148,22 @@ RC_GTEST_PROP(Vectors, nestedMarshalling, (vector<vector<int>> a)) {
     stream >> v2;
 
     RC_ASSERT(v1 == v2);
+}
+
+TEST(Vectors, emptyNested) {
+    vector<vector<int>> a{{}};
+    vt::VectorTo v1;
+    transform(a.begin(), a.end(), back_inserter(v1.v), [](const vector<int>& v) {
+        return vt::Vectors{v};
+    });
+
+    std::stringstream stream;
+    stream << v1;
+
+    vt::VectorTo v2;
+    stream >> v2;
+
+    EXPECT_TRUE(v1 == v2);
 }
 
 } // namespace

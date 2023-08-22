@@ -67,20 +67,42 @@ void from_kjson(To& target, kjson::scalar_t v) {
     target = kjson_extract<To>(std::move(v));
 }
 
+void check(kjson::maybe_error me) {
+    if(me.is_err()) {
+        throw std::runtime_error(me.unwrap_err().msg);
+    }
+}
+
 // reading from json as a state machine, where the state is defined by the target structure
 class populate_state {
 public:
     virtual ~populate_state() = default;
 
-    virtual void scalar(std::string_view key, kjson::scalar_t v) = 0;
+    virtual void scalar(kjson::scalar_t v) {
+        throw std::runtime_error("unexpected unkeyed scalar");
+    }
+    virtual void scalar(std::string_view key, kjson::scalar_t v) {
+        throw std::runtime_error("unexpected keyed scalar");
+    }
 
     // return value indicates the next state
-    virtual std::unique_ptr<populate_state> push_mapping(std::string_view key) = 0;
+    virtual std::unique_ptr<populate_state> push_sequence() {
+        throw std::runtime_error("unexpected unkeyed sequence");
+    }
+    virtual std::unique_ptr<populate_state> push_sequence(std::string_view key) {
+        throw std::runtime_error("unexpected keyed scalar");
+    }
+    virtual std::unique_ptr<populate_state> push_mapping() {
+        throw std::runtime_error("unexpected unkeyed mapping");
+    }
+    virtual std::unique_ptr<populate_state> push_mapping(std::string_view key) {
+        throw std::runtime_error("unexpected keyed mapping");
+    }
 };
 
 template <typename T>
 struct populate_trait {
-    static std::unique_ptr<populate_state> make_state(auto&& target) {
+    static std::unique_ptr<populate_state> make_state(auto& target) {
         throw std::runtime_error("conversion error - target is not a recognized struct");
     }
 };
@@ -92,6 +114,7 @@ public:
     {{ typedef.name}}_populate_state({{ typedef.name }} &target);
     
     void scalar(std::string_view key, kjson::scalar_t v) override;
+    std::unique_ptr<populate_state> push_sequence(std::string_view key) override;
     std::unique_ptr<populate_state> push_mapping(std::string_view key) override;
 private:
     {{ typedef.name }} &d_target;
@@ -99,11 +122,36 @@ private:
 
 template <>
 struct populate_trait<{{ typedef.name }}_populate_state> {
-    static std::unique_ptr<populate_state> make_state(auto&& target) {
-        return std::make_unique<{{ typedef.name }}_populate_state>(std::forward(target));
+    static std::unique_ptr<populate_state> make_state(auto& target) {
+        return std::make_unique<{{ typedef.name }}_populate_state>(target);
     }
 };
 
+template <>
+struct populate_trait<{{ typedef.name }}> : public populate_trait<{{ typedef.name }}_populate_state>
+{};
+
+## for member in typedef.members
+## if member.value_type
+class {{ typedef.name }}_{{ member.name }}_populate_state : public populate_state {
+public:
+    {{ typedef.name}}_{{ member.name }}_populate_state({{ member.type }} &target);
+    
+    void scalar(kjson::scalar_t v) override;
+    std::unique_ptr<populate_state> push_sequence() override;
+    std::unique_ptr<populate_state> push_mapping() override;
+private:
+    {{ member.type }} &d_target;
+};
+
+template <>
+struct populate_trait<{{ typedef.name }}_{{ member.name }}_populate_state> {
+    static std::unique_ptr<populate_state> make_state(auto& target) {
+        return std::make_unique<{{ typedef.name }}_{{ member.name }}_populate_state>(target);
+    }
+};
+## endif
+## endfor
 ## endfor
 
 template <typename Initial, typename Target>
@@ -113,7 +161,7 @@ public:
     {}
 
     void scalar(kjson::scalar_t v) override {
-        // assert(false && "implement me");
+        state().scalar(std::move(v));
     }
 
     void scalar(std::string_view key, kjson::scalar_t v) override {
@@ -121,22 +169,33 @@ public:
     }
 
     void push_sequence() override {
-        // assert(false && "implement me");
+        auto next = state().push_sequence();
+        assert(next);
+        d_states.push(std::move(next));
     }
 
     void push_sequence(std::string_view key) override {
-        // assert(false && "implement me");
+        auto next = state().push_sequence(key);
+        if (!next) {
+            throw std::runtime_error("unexpected keyed sequence");
+        }
+        d_states.push(std::move(next));
     }
 
     void push_mapping() override {
         if (d_states.empty()) {
             d_states.push(std::make_unique<Initial>(d_target));
         } else {
-           // assert(false && "implement me");
+            auto next = state().push_mapping();
+            assert(next);
+            d_states.push(std::move(next));
         }
     }
     void push_mapping(std::string_view key) override {
         auto next = state().push_mapping(key);
+        if (!next) {
+            throw std::runtime_error("unexpected keyed mapping");
+        }
         d_states.push(std::move(next));
     }
 
@@ -193,6 +252,19 @@ void {{ typedef.name }}_populate_state::scalar(std::string_view key, kjson::scal
 ## endfor
 }
 
+std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_sequence(std::string_view key) {
+## for member in typedef.members
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
+## if member.value_type
+        return populate_trait<{{ typedef.name }}_{{ member.name}}_populate_state>::make_state(d_target.{{ member.name }});
+## else
+        return populate_trait<int>::make_state(*this); // throws 
+## endif
+    }
+## endfor
+    return nullptr;
+}
+
 std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_mapping(std::string_view key)   {
 ## for member in typedef.members
     {% if not loop.is_first %}else {% endif %}if (key == "{{ member.name }}") {
@@ -201,6 +273,52 @@ std::unique_ptr<populate_state> {{ typedef.name }}_populate_state::push_mapping(
 ## endfor
     return nullptr;
 }
+
+## for member in typedef.members
+## if member.value_type
+
+{{ typedef.name}}_{{ member.name }}_populate_state::{{ typedef.name}}_{{ member.name }}_populate_state({{ member.type }} &target) 
+    : d_target(target) {
+## if member.optional
+    if (!d_target) {
+        d_target.emplace();
+    }
+## endif
+}
+
+void {{ typedef.name}}_{{ member.name }}_populate_state::scalar(kjson::scalar_t v) {
+## if member.optional
+    assert(d_target && "unexpectedly null");
+    d_target->emplace_back(kjson_extract<{{ member.value_type }}>(std::move(v)));
+## else
+    d_target.emplace_back(kjson_extract<{{ member.value_type }}>(std::move(v)));
+## endif    
+}
+
+std::unique_ptr<populate_state> {{ typedef.name}}_{{ member.name }}_populate_state::push_sequence() {
+## if member.optional
+    assert(d_target && "unexpectedly null");
+    d_target->emplace_back();
+    return populate_trait<{{ member.value_type }}::value_type>::make_state(d_target->back());
+## else
+    d_target.emplace_back();
+    return populate_trait<{{ member.value_type }}>::make_state(d_target.back());
+## endif    
+}
+
+std::unique_ptr<populate_state> {{ typedef.name}}_{{ member.name }}_populate_state::push_mapping() {
+## if member.optional
+    assert(d_target && "unexpectedly null");
+    d_target->emplace_back();
+    return populate_trait<{{ member.value_type }}::value_type>::make_state(d_target->back());
+## else
+    d_target.emplace_back();
+    return populate_trait<{{ member.value_type }}>::make_state(d_target.back());
+## endif    
+}
+
+## endif
+## endfor
 
 ## endfor
 
@@ -214,7 +332,7 @@ void to_json(std::ostream& out, const {{typedef.name }} &v) {
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {
     populate_state_machine<{{ typedef.name }}_populate_state, {{typedef.name}}> visitor(v);
-    kjson::load(in, visitor).expect("invalid json");
+    check(kjson::load(in, visitor));
 }
 
 ## endfor
