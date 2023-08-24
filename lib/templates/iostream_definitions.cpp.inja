@@ -128,7 +128,7 @@ struct populate_trait<{{ typedef.name }}_populate_state> {
 };
 
 template <>
-struct populate_trait<{{ typedef.name }}> : public populate_trait<{{ typedef.name }}_populate_state>
+struct populate_trait<{{ typedef.name }}> : populate_trait<{{ typedef.name }}_populate_state>
 {};
 
 ## for member in typedef.members
@@ -150,6 +150,28 @@ struct populate_trait<{{ typedef.name }}_{{ member.name }}_populate_state> {
         return std::make_unique<{{ typedef.name }}_{{ member.name }}_populate_state>(target);
     }
 };
+## else if member.value_types
+class {{ typedef.name }}_{{ member.name }}_populate_state : public populate_state {
+public:
+    {{ typedef.name }}_{{ member.name }}_populate_state({{ member.type }} &target);
+
+    void scalar(std::string_view key, kjson::scalar_t v) override;
+    std::unique_ptr<populate_state> push_mapping(std::string_view key) override;
+private:
+    {{ member.type }} &d_target;
+};
+
+template <>
+struct populate_trait<{{ typedef.name }}_{{ member.name }}_populate_state> {
+    static std::unique_ptr<populate_state> make_state(auto& target) {
+        return std::make_unique<{{ typedef.name }}_{{ member.name }}_populate_state>(target);
+    }
+};
+
+template <>
+struct populate_trait<{{ member.type }}> : public populate_trait<{{ typedef.name }}_{{ member.name }}_populate_state>
+{};
+
 ## endif
 ## endfor
 ## endfor
@@ -315,6 +337,60 @@ std::unique_ptr<populate_state> {{ typedef.name}}_{{ member.name }}_populate_sta
     d_target.emplace_back();
     return populate_trait<{{ member.value_type }}>::make_state(d_target.back());
 ## endif    
+}
+
+## else if member.value_types
+{{ typedef.name}}_{{ member.name }}_populate_state::{{ typedef.name}}_{{ member.name }}_populate_state({{ member.type }} &target) 
+    : d_target(target) {
+## if member.optional
+    if (!d_target) {
+        d_target.emplace();
+    }
+## endif
+}
+
+void {{ typedef.name}}_{{ member.name }}_populate_state::scalar(std::string_view key, kjson::scalar_t v) {
+## for value_type in member.value_types
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ value_type.name }}") {
+## if member.optional
+        assert(d_target && "unexpectedly null");
+        d_target->emplace<{{ value_type.type }}>();
+        from_kjson(std::get<{{ value_type.type }}>(*d_target), std::move(v));
+## else
+        d_target.emplace<{{ value_type.type }}>();
+        from_kjson(std::get<{{ value_type.type }}>(d_target), std::move(v));
+## endif
+    }
+## endfor
+}
+
+std::unique_ptr<populate_state> {{ typedef.name}}_{{ member.name }}_populate_state::push_mapping(std::string_view key) {
+## for value_type in member.value_types
+    {% if not loop.is_first %}else {% endif %}if (key == "{{ value_type.name }}") {
+## if value_type.optional
+        using T = {{ value_type.type }}::value_type;
+## else
+        using T = {{ value_type.type }};
+## endif
+## if member.optional
+        assert(d_target && "unexpectedly null");
+        d_target->emplace<{{ value_type.type }}>();
+## if value_type.optional
+        std::get<{{ value_type.type }}>(*d_target).emplace();
+## endif
+        return populate_trait<T>::make_state(std::get<T>(*d_target));
+## else
+        d_target.emplace<{{ value_type.type }}>();
+## if value_type.optional
+        std::get<{{ value_type.type }}>(d_target).emplace();
+        return populate_trait<T>::make_state(*std::get<{{ value_type.type }}>(d_target));
+## else
+        return populate_trait<T>::make_state(std::get<{{ value_type.type }}>(d_target));
+## endif
+## endif
+    }
+## endfor
+    return nullptr;
 }
 
 ## endif

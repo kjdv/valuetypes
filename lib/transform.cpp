@@ -110,6 +110,7 @@ Variables transform(const Member& member, const unordered_set<string>& local_typ
             } else {
                 j["name"] = n;
             }
+            j["optional"] = item.optional;
 
             return j;
         });
