@@ -522,11 +522,11 @@ template <typename T>
 void value(tokenizer& input, T& target) {
     if constexpr(is_optional_v<T>) {
         if(input.peek().tok == token::type_t::e_null) {
-            target.clear();
+            target.reset();
             input.next();
         } else {
             target.emplace();
-            parse(input, *target);
+            value(input, *target);
         }
     } else if constexpr(is_vector_v<T>) {
         array(input, target);
@@ -598,6 +598,7 @@ void value(tokenizer& input, T& target) {
 // forward declarations
 void member(tokenizer& input, sp::Nested& target);
 void member(tokenizer& input, sp::Compound& target);
+void member(tokenizer& input, sp::OptionalVectors& target);
 void member(tokenizer& input, sp::VectorTo& target);
 
 template <typename T>
@@ -663,6 +664,16 @@ void member(tokenizer& input, sp::Compound& target) {
     }
 }
 
+void member(tokenizer& input, sp::OptionalVectors& target) {
+    auto key = extract_key(input);
+    if(key.value == "v") {
+        element(input, target.v);
+    } else {
+        // todo: tolerate this
+        throw json_error(std::string("unknown key: ") + to_string(key));
+    }
+}
+
 void member(tokenizer& input, sp::VectorTo& target) {
     auto key = extract_key(input);
     if(key.value == "v") {
@@ -715,12 +726,8 @@ void element(tokenizer& input, T& target) {
 } // namespace json
 
 void to_kjson(kjson::builder& builder, const Nested& v);
-
 void to_kjson(kjson::builder& builder, const Compound& v);
-
 void to_kjson(kjson::builder &builder, const OptionalVectors &v);
-void from_kjson(const kjson::document &doc, OptionalVectors &target);
-
 void to_kjson(kjson::builder& builder, const VectorTo& v);
 
 template <typename T>
@@ -742,31 +749,7 @@ void to_kjson(kjson::builder& builder, const T& v) {
     }
 }
 
-template <typename T>
-void from_kjson(const kjson::document &doc, T &target) {
-    if constexpr (is_optional_v<T>) {
-        if (doc.is<composite::none>()) {
-            target.reset();
-        } else {
-            target.emplace();
-            from_kjson(doc, *target);
-        }
-    } else if constexpr (is_vector_v<T>) {
-        using U = typename T::value_type;
-
-        target.clear();
-        auto& as_seq = doc.as<composite::sequence>();
-        std::transform(as_seq.begin(), as_seq.end(), std::back_inserter(target), [](auto&& item){
-            U v{};
-            from_kjson(item, v);
-            return v;
-        });
-    } else {
-        target = doc.to<T>();
-    }
-}
-
-void to_kjson(kjson::builder &builder, const Nested &v) {
+void to_kjson(kjson::builder& builder, const Nested& v) {
     builder.push_mapping();
     builder.key("s");
     to_kjson(builder, v.s);
@@ -788,14 +771,6 @@ void to_kjson(kjson::builder& builder, const OptionalVectors& v) {
     to_kjson(builder, v.v);
     builder.pop();
 }
-
-void from_kjson(const kjson::document &doc, OptionalVectors &target) {
-    auto& m = doc.as<composite::mapping>();
-    if (auto it = m.find("v"); it != m.end()) {
-        from_kjson(it->second, target.v);
-    }
-}
-
 void to_kjson(kjson::builder &builder, const VectorTo &v) {
     builder.push_mapping();
     builder.key("v");
@@ -831,8 +806,8 @@ void to_json(std::ostream& out, const OptionalVectors &v) {
 }
 
 void from_json(std::istream& in, OptionalVectors &v) {
-    auto doc = kjson::load(in).expect("invalid json");
-    from_kjson(doc, v);
+    json::tokenizer input(in);
+    json::value(input, v);
 }
 
 void to_json(std::ostream& out, const VectorTo &v) {
