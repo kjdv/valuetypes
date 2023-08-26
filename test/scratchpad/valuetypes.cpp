@@ -159,12 +159,39 @@ constexpr bool is_vector_v = is_vector<T>::value;
 
 namespace json {
 
+/*
+ * Grammar:
+ *
+ * json
+ *   element
+ *
+ * value
+ *   object | array | string | number | "true" | "false" |  "null"
+ *
+ * object
+ *   '{' ws '}' | '{' members '}'
+ *
+ * members
+ *   member | member ',' members
+ *
+ * member
+ *   ws string ws ':' element
+ *
+ * array
+ *   '[' ws ']' | '[' elements ']'
+ *
+ * elements
+ *   element | element ',' elements
+ *
+ * element
+ *   ws value ws
+ *
+ */
+
 class json_error : public std::runtime_error {
   public:
     using std::runtime_error::runtime_error;
 };
-
-namespace tokenizer {
 
 constexpr const int eof = std::char_traits<char>::eof();
 
@@ -432,42 +459,82 @@ token next_token(std::istream& input) {
     return token{token::type_t::e_eof};
 }
 
-} // namespace tokenizer
+class tokenizer {
+  public:
+    tokenizer(std::istream& input)
+      : d_input(input) {}
 
-namespace parser {
+    token next() {
+        if(d_next) {
+            token t = std::move(d_next.value());
+            d_next.reset();
+            return t;
+        }
+        return next_token(d_input);
+    }
 
-using tokenizer::token;
+    const token& peek() {
+        if(!d_next) {
+            d_next = next_token(d_input);
+        }
+        return d_next.value();
+    }
+
+  private:
+    std::istream&        d_input;
+    std::optional<token> d_next;
+};
 
 void expect(token::type_t e, const token& actual) {
     if(actual.tok != e) {
-        throw json_error(std::string("expected ") + tokenizer::to_string(e) + ", found " + tokenizer::to_string(actual));
+        throw json_error(std::string("expected ") + to_string(e) + ", found " + to_string(actual));
     }
 }
 
-token expect_and_consume(std::istream& input, token::type_t e) {
-    auto t = tokenizer::next_token(input);
+token expect_and_consume(tokenizer& input, token::type_t e) {
+    auto t = input.next();
     expect(e, t);
     return t;
 }
 
 template <typename T>
-void parse(std::istream& input, T& target, std::optional<token> tok = std::nullopt) {
-    if(!tok) {
-        tok = tokenizer::next_token(input);
-    }
+void value(tokenizer& input, T& target);
 
+template <typename T>
+void object(tokenizer& input, T& target);
+
+template <typename T>
+void members(tokenizer& input, T& target);
+
+template <typename T>
+void member(tokenizer& input, T& target);
+
+template <typename T>
+void array(tokenizer& input, T& target);
+
+template <typename T>
+void element(tokenizer& input, T& target);
+
+template <typename T>
+void elements(tokenizer& input, T& target);
+
+template <typename T>
+void value(tokenizer& input, T& target) {
     if constexpr(is_optional_v<T>) {
-        if(tok->tok == token::type_t::e_null) {
+        if(input.peek().tok == token::type_t::e_null) {
             target.clear();
+            input.next();
         } else {
             target.emplace();
-            parse(input, *target, tok);
+            parse(input, *target);
         }
     } else if constexpr(std::is_same_v<std::string, T>) {
-        expect(token::type_t::e_string, *tok);
-        target = std::move(tok->value);
+        auto tok = input.next();
+        expect(token::type_t::e_string, tok);
+        target = std::move(tok.value);
     } else if constexpr(std::is_same_v<bool, T>) {
-        switch(tok->tok) {
+        auto tok = input.next();
+        switch(tok.tok) {
         case token::type_t::e_true:
             target = true;
             break;
@@ -475,46 +542,49 @@ void parse(std::istream& input, T& target, std::optional<token> tok = std::nullo
             target = false;
             break;
         default:
-            throw json_error("expected 'true' or 'false', found: " + tokenizer::to_string(*tok));
+            throw json_error("expected 'true' or 'false', found: " + to_string(tok));
         }
     } else if constexpr(std::is_integral_v<T> && std::is_unsigned_v<T>) {
-        expect(token::type_t::e_uint, *tok);
+        auto tok = input.next();
+        expect(token::type_t::e_uint, tok);
         char* c;
-        target = std::strtoull(tok->value.c_str(), &c, 10);
+        target = std::strtoull(tok.value.c_str(), &c, 10);
     } else if constexpr(std::is_integral_v<T>) {
-        switch(tok->tok) {
+        auto tok = input.next();
+        switch(tok.tok) {
         case token::type_t::e_uint: {
             char* c;
-            target = std::strtoull(tok->value.c_str(), &c, 10);
+            target = std::strtoull(tok.value.c_str(), &c, 10);
             break;
         }
         case token::type_t::e_int: {
             char* c;
-            target = std::strtoll(tok->value.c_str(), &c, 10);
+            target = std::strtoll(tok.value.c_str(), &c, 10);
             break;
         }
         default:
-            throw json_error("expected integer, found: " + tokenizer::to_string(*tok));
+            throw json_error("expected integer, found: " + to_string(tok));
         }
     } else if constexpr(std::is_floating_point_v<T>) {
-        switch(tok->tok) {
+        auto tok = input.next();
+        switch(tok.tok) {
         case token::type_t::e_uint: {
             char* c;
-            target = std::strtoull(tok->value.c_str(), &c, 10);
+            target = std::strtoull(tok.value.c_str(), &c, 10);
             break;
         }
         case token::type_t::e_int: {
             char* c;
-            target = std::strtoll(tok->value.c_str(), &c, 10);
+            target = std::strtoll(tok.value.c_str(), &c, 10);
             break;
         }
         case token::type_t::e_float: {
             char* c;
-            target = std::strtod(tok->value.c_str(), &c);
+            target = std::strtod(tok.value.c_str(), &c);
             break;
         }
         default:
-            throw json_error("expected number, found: " + tokenizer::to_string(*tok));
+            throw json_error("expected number, found: " + to_string(tok));
         }
     } else {
         assert(false && "type deduction failed");
@@ -522,58 +592,88 @@ void parse(std::istream& input, T& target, std::optional<token> tok = std::nullo
 }
 
 // forward declarations
-void parse(std::istream& input, sp::Nested& target);
-void parse(std::istream& input, sp::Compound& target);
+void member(tokenizer& input, sp::Nested& target);
+void member(tokenizer& input, sp::Compound& target);
+void value(tokenizer& input, sp::Nested& target);
+void value(tokenizer& input, sp::Compound& target);
 
-void parse(std::istream& input, sp::Nested& target) {
+template <typename T>
+void object(tokenizer& input, T& target) {
+    // object
+    //   '{' ws '}' | '{' members '}'
     expect_and_consume(input, token::type_t::e_start_mapping);
 
-    auto tok = tokenizer::next_token(input);
-    while(tok.tok == token::type_t::e_string) {
-        expect_and_consume(input, token::type_t::e_mapper);
-
-        if(tok.value == "s") {
-            parse(input, target.s);
-        } else {
-            throw json_error(std::string("unknown key: ") + tokenizer::to_string(tok));
-        }
-
-        tok = tokenizer::next_token(input);
-        if(tok.tok != token::type_t::e_separator) {
-            break;
-        }
-        tok = tokenizer::next_token(input);
+    if(input.peek().tok == token::type_t::e_string) {
+        members(input, target);
     }
 
-    expect(token::type_t::e_end_mapping, tok);
+    expect_and_consume(input, token::type_t::e_end_mapping);
 }
 
-void parse(std::istream& input, sp::Compound& target) {
-    expect_and_consume(input, token::type_t::e_start_mapping);
-
-    auto tok = tokenizer::next_token(input);
-    while(tok.tok == token::type_t::e_string) {
-        expect_and_consume(input, token::type_t::e_mapper);
-
-        if(tok.value == "a") {
-            parse(input, target.a);
-        } else if(tok.value == "b") {
-            parse(input, target.b);
-        } else {
-            throw json_error(std::string("unknown key: ") + tokenizer::to_string(tok));
-        }
-
-        tok = tokenizer::next_token(input);
-        if(tok.tok != token::type_t::e_separator) {
+template <typename T>
+void members(tokenizer& input, T& target) {
+    // members
+    //   member | member ',' members
+    while(true) {
+        member(input, target);
+        if(input.peek().tok != token::type_t::e_separator) {
             break;
         }
-        tok = tokenizer::next_token(input);
+        input.next();
     }
-
-    expect(token::type_t::e_end_mapping, tok);
 }
 
-} // namespace parser
+token extract_key(tokenizer& input) {
+    auto tok = expect_and_consume(input, token::type_t::e_string);
+    expect_and_consume(input, token::type_t::e_mapper);
+    return tok;
+}
+
+template <typename T>
+void member(tokenizer& input, T& target) {
+    // member
+    //   ws string ws ':' element
+
+    extract_key(input);
+    element(input, target);
+}
+
+void member(tokenizer& input, sp::Nested& target) {
+    auto key = extract_key(input);
+    if(key.value == "s") {
+        element(input, target.s);
+    } else {
+        // todo: tolerate this
+        throw json_error(std::string("unknown key: ") + to_string(key));
+    }
+}
+
+void member(tokenizer& input, sp::Compound& target) {
+    auto key = extract_key(input);
+    if(key.value == "a") {
+        element(input, target.a);
+    } else if(key.value == "b") {
+        element(input, target.b);
+    } else {
+        // todo: tolerate this
+        throw json_error(std::string("unknown key: ") + to_string(key));
+    }
+}
+
+template <typename T>
+void element(tokenizer& input, T& target) {
+    // element
+    //   ws value ws
+    value(input, target);
+}
+
+void value(tokenizer& input, sp::Nested& target) {
+    object(input, target);
+}
+void value(tokenizer& input, sp::Compound& target) {
+    object(input, target);
+}
+
 } // namespace json
 
 void to_kjson(kjson::builder &builder, const Nested &v);
@@ -701,7 +801,8 @@ void to_json(std::ostream& out, const Nested &v) {
 }
 
 void from_json(std::istream& in, Nested &v) {
-    json::parser::parse(in, v);
+    json::tokenizer input(in);
+    json::value(input, v);
 }
 
 void to_json(std::ostream& out, const Compound &v) {
@@ -710,7 +811,8 @@ void to_json(std::ostream& out, const Compound &v) {
 }
 
 void from_json(std::istream& in, Compound &v) {
-    json::parser::parse(in, v);
+    json::tokenizer input(in);
+    json::value(input, v);
 }
 
 void to_json(std::ostream& out, const OptionalVectors &v) {
