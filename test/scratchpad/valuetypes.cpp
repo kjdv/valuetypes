@@ -1,14 +1,15 @@
 #include "valuetypes.h"
+#include <algorithm>
 #include <cassert>
+#include <composite/make.hh>
+#include <iomanip>
+#include <kjson/builder.hh>
+#include <kjson/json.hh>
 #include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <algorithm>
-#include <kjson/json.hh>
-#include <kjson/builder.hh>
-#include <composite/make.hh>
 
 namespace sp { 
 
@@ -163,6 +164,8 @@ class json_error : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+namespace tokenizer {
+
 constexpr const int eof = std::char_traits<char>::eof();
 
 struct token {
@@ -186,6 +189,44 @@ struct token {
     type_t      tok{type_t::e_eof};
     std::string value{};
 };
+
+constexpr std::string to_string(token::type_t tok) {
+    switch(tok) {
+    case token::type_t::e_start_mapping:
+        return "{";
+    case token::type_t::e_end_mapping:
+        return "}";
+    case token::type_t::e_start_sequence:
+        return "[";
+    case token::type_t::e_end_sequence:
+        return "]";
+    case token::type_t::e_separator:
+        return ",";
+    case token::type_t::e_mapper:
+        return ":";
+    case token::type_t::e_string:
+        return "quoted string";
+    case token::type_t::e_int:
+        return "integer";
+    case token::type_t::e_uint:
+        return "unsigned integer";
+    case token::type_t::e_float:
+        return "floating point number";
+    case token::type_t::e_true:
+        return "true";
+    case token::type_t::e_false:
+        return "false";
+    case token::type_t::e_null:
+        return "null";
+    case token::type_t::e_eof:
+        return "eof";
+    }
+    return "";
+}
+
+std::string to_string(const token& tok) {
+    return to_string(tok.tok) + (tok.value.empty() ? "" : std::string(" '") + tok.value + "'");
+}
 
 int non_ws(std::istream& str) {
     char c = 0;
@@ -391,6 +432,148 @@ token next_token(std::istream& input) {
     return token{token::type_t::e_eof};
 }
 
+} // namespace tokenizer
+
+namespace parser {
+
+using tokenizer::token;
+
+void expect(token::type_t e, const token& actual) {
+    if(actual.tok != e) {
+        throw json_error(std::string("expected ") + tokenizer::to_string(e) + ", found " + tokenizer::to_string(actual));
+    }
+}
+
+token expect_and_consume(std::istream& input, token::type_t e) {
+    auto t = tokenizer::next_token(input);
+    expect(e, t);
+    return t;
+}
+
+template <typename T>
+void parse(std::istream& input, T& target, std::optional<token> tok = std::nullopt) {
+    if(!tok) {
+        tok = tokenizer::next_token(input);
+    }
+
+    if constexpr(is_optional_v<T>) {
+        if(tok->tok == token::type_t::e_null) {
+            target.clear();
+        } else {
+            target.emplace();
+            parse(input, *target, tok);
+        }
+    } else if constexpr(std::is_same_v<std::string, T>) {
+        expect(token::type_t::e_string, *tok);
+        target = std::move(tok->value);
+    } else if constexpr(std::is_same_v<bool, T>) {
+        switch(tok->tok) {
+        case token::type_t::e_true:
+            target = true;
+            break;
+        case token::type_t::e_false:
+            target = false;
+            break;
+        default:
+            throw json_error("expected 'true' or 'false', found: " + tokenizer::to_string(*tok));
+        }
+    } else if constexpr(std::is_integral_v<T> && std::is_unsigned_v<T>) {
+        expect(token::type_t::e_uint, *tok);
+        char* c;
+        target = std::strtoull(tok->value.c_str(), &c, 10);
+    } else if constexpr(std::is_integral_v<T>) {
+        switch(tok->tok) {
+        case token::type_t::e_uint: {
+            char* c;
+            target = std::strtoull(tok->value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_int: {
+            char* c;
+            target = std::strtoll(tok->value.c_str(), &c, 10);
+            break;
+        }
+        default:
+            throw json_error("expected integer, found: " + tokenizer::to_string(*tok));
+        }
+    } else if constexpr(std::is_floating_point_v<T>) {
+        switch(tok->tok) {
+        case token::type_t::e_uint: {
+            char* c;
+            target = std::strtoull(tok->value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_int: {
+            char* c;
+            target = std::strtoll(tok->value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_float: {
+            char* c;
+            target = std::strtod(tok->value.c_str(), &c);
+            break;
+        }
+        default:
+            throw json_error("expected number, found: " + tokenizer::to_string(*tok));
+        }
+    } else {
+        assert(false && "type deduction failed");
+    }
+}
+
+// forward declarations
+void parse(std::istream& input, sp::Nested& target);
+void parse(std::istream& input, sp::Compound& target);
+
+void parse(std::istream& input, sp::Nested& target) {
+    expect_and_consume(input, token::type_t::e_start_mapping);
+
+    auto tok = tokenizer::next_token(input);
+    while(tok.tok == token::type_t::e_string) {
+        expect_and_consume(input, token::type_t::e_mapper);
+
+        if(tok.value == "s") {
+            parse(input, target.s);
+        } else {
+            throw json_error(std::string("unknown key: ") + tokenizer::to_string(tok));
+        }
+
+        tok = tokenizer::next_token(input);
+        if(tok.tok != token::type_t::e_separator) {
+            break;
+        }
+        tok = tokenizer::next_token(input);
+    }
+
+    expect(token::type_t::e_end_mapping, tok);
+}
+
+void parse(std::istream& input, sp::Compound& target) {
+    expect_and_consume(input, token::type_t::e_start_mapping);
+
+    auto tok = tokenizer::next_token(input);
+    while(tok.tok == token::type_t::e_string) {
+        expect_and_consume(input, token::type_t::e_mapper);
+
+        if(tok.value == "a") {
+            parse(input, target.a);
+        } else if(tok.value == "b") {
+            parse(input, target.b);
+        } else {
+            throw json_error(std::string("unknown key: ") + tokenizer::to_string(tok));
+        }
+
+        tok = tokenizer::next_token(input);
+        if(tok.tok != token::type_t::e_separator) {
+            break;
+        }
+        tok = tokenizer::next_token(input);
+    }
+
+    expect(token::type_t::e_end_mapping, tok);
+}
+
+} // namespace parser
 } // namespace json
 
 void to_kjson(kjson::builder &builder, const Nested &v);
@@ -518,8 +701,7 @@ void to_json(std::ostream& out, const Nested &v) {
 }
 
 void from_json(std::istream& in, Nested &v) {
-    auto doc = kjson::load(in).expect("invalid json");
-    from_kjson(doc, v);
+    json::parser::parse(in, v);
 }
 
 void to_json(std::ostream& out, const Compound &v) {
@@ -528,8 +710,7 @@ void to_json(std::ostream& out, const Compound &v) {
 }
 
 void from_json(std::istream& in, Compound &v) {
-    auto doc = kjson::load(in).expect("invalid json");
-    from_kjson(doc, v);
+    json::parser::parse(in, v);
 }
 
 void to_json(std::ostream& out, const OptionalVectors &v) {
