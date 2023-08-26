@@ -1,18 +1,16 @@
 #include "valuetypes.h"
-#include <algorithm>
 #include <cassert>
-#include <composite/make.hh>
-#include <kjson/builder.hh>
-#include <kjson/json.hh>
-#include <kjson/visitor.hh>
 #include <optional>
-#include <stack>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <algorithm>
+#include <kjson/json.hh>
+#include <kjson/builder.hh>
+#include <composite/make.hh>
 
-namespace vt { 
+namespace sp { 
 
 bool operator==(const Nested &a, const Nested &b) noexcept {
     return
@@ -31,6 +29,26 @@ bool operator==(const Compound &a, const Compound &b) noexcept {
 }
 
 bool operator!=(const Compound &a, const Compound &b) noexcept {
+    return !(a == b);
+}
+
+bool operator==(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return
+        std::tie(a.v) ==
+        std::tie(b.v);
+}
+
+bool operator!=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return !(a == b);
+}
+
+bool operator==(const VectorTo &a, const VectorTo &b) noexcept {
+    return
+        std::tie(a.v) ==
+        std::tie(b.v);
+}
+
+bool operator!=(const VectorTo &a, const VectorTo &b) noexcept {
     return !(a == b);
 }
 
@@ -71,13 +89,49 @@ bool operator>=(const Compound &a, const Compound &b) noexcept {
     return !(a < b);
 }
 
+bool operator<(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return
+        std::tie(a.v) <
+        std::tie(b.v);
+}
+
+bool operator<=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return !(b < a);
+}
+
+bool operator>(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return b < a;
+}
+
+bool operator>=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
+    return !(a < b);
+}
+
+bool operator<(const VectorTo &a, const VectorTo &b) noexcept {
+    return
+        std::tie(a.v) <
+        std::tie(b.v);
+}
+
+bool operator<=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(b < a);
+}
+
+bool operator>(const VectorTo &a, const VectorTo &b) noexcept {
+    return b < a;
+}
+
+bool operator>=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(a < b);
+}
 
 
-} // } // namespace vt
+
+} // } // namespace sp
 
 // start iostream_definitions.cpp.inja
 
-namespace vt { 
+namespace sp { 
 namespace {
 
 template <typename T>
@@ -108,152 +162,15 @@ void from_kjson(const kjson::document &doc, Nested &target);
 void to_kjson(kjson::builder &builder, const Compound &v);
 void from_kjson(const kjson::document &doc, Compound &target);
 
-template <typename To>
-To extract(kjson::scalar_t v) {
-    return std::visit([](auto value) -> To {
-        if constexpr(std::is_convertible_v<decltype(value), To>) {
-            return value;
-        } else {
-            throw std::runtime_error("cannot convert");
-        }
-    },
-                      v);
-}
+void to_kjson(kjson::builder &builder, const OptionalVectors &v);
+void from_kjson(const kjson::document &doc, OptionalVectors &target);
+
+void to_kjson(kjson::builder &builder, const VectorTo &v);
+void from_kjson(const kjson::document &doc, VectorTo &target);
+
 
 template <typename T>
-void assign(T& target, kjson::scalar_t v) {
-    target = extract<T>(std::move(v));
-}
-
-void check(kjson::maybe_error me) {
-    if(me.is_err()) {
-        throw std::runtime_error(me.unwrap_err().msg);
-    }
-}
-
-class StackedVisitor : public kjson::visitor {
-  public:
-    void set_delegate(std::unique_ptr<StackedVisitor> d) {
-        d_delegate = std::move(d);
-    }
-    void pop() final {
-        if(d_delegate) {
-            d_delegate->pop();
-
-            if(!d_delegate->has_delegate()) {
-                d_delegate.reset();
-            }
-        }
-    }
-
-    bool has_delegate() const {
-        return d_delegate.get();
-    }
-
-    StackedVisitor& delegate() {
-        assert(d_delegate);
-        return *d_delegate;
-    }
-
-  private:
-    std::unique_ptr<StackedVisitor> d_delegate;
-};
-
-class PopulateState {
-  public:
-    virtual ~PopulateState() = default;
-
-    virtual void scalar(std::string_view key, kjson::scalar_t v) = 0;
-
-    virtual std::unique_ptr<PopulateState> push_mapping(std::string_view key) = 0;
-};
-
-class PopulateNestedState : public PopulateState {
-  public:
-    PopulateNestedState(Nested& target)
-      : d_target(target) {}
-
-    void scalar(std::string_view key, kjson::scalar_t v) override {
-        if(key == "s") {
-            assign(d_target.s, std::move(v));
-        }
-    }
-
-    std::unique_ptr<PopulateState> push_mapping(std::string_view key) override {
-        assert(false && "not implemented");
-        return nullptr;
-    }
-
-  private:
-    Nested& d_target;
-};
-
-class PopulateCompoundState : public PopulateState {
-  public:
-    PopulateCompoundState(Compound& target)
-      : d_target(target) {}
-
-    void scalar(std::string_view key, kjson::scalar_t v) override {
-        assert(false);
-    }
-    std::unique_ptr<PopulateState> push_mapping(std::string_view key) override {
-        if(key == "a") {
-            return std::make_unique<PopulateNestedState>(d_target.a);
-        } else if(key == "b") {
-            return std::make_unique<PopulateNestedState>(d_target.b);
-        } else {
-            return nullptr;
-        }
-    }
-
-  private:
-    Compound& d_target;
-};
-
-class PopulateStateMachine : public kjson::visitor {
-  public:
-    PopulateStateMachine(std::unique_ptr<PopulateState> initial) {
-        d_states.push(std::move(initial));
-    }
-
-    void scalar(kjson::scalar_t v) override {
-        //        state().scalar(std::move(v));
-    }
-    void scalar(std::string_view key, kjson::scalar_t v) override {
-        state().scalar(key, std::move(v));
-    }
-
-    void push_sequence() override {
-        // state().push_sequence();
-    }
-
-    void push_sequence(std::string_view key) override {
-        // state().push_sequence(key);
-    }
-
-    void push_mapping() override {
-        // state().push_mapping();
-    }
-    void push_mapping(std::string_view key) override {
-        auto next = state().push_mapping(key);
-        d_states.push(std::move(next));
-    }
-
-    void pop() override {
-        d_states.pop();
-    }
-
-  private:
-    PopulateState& state() {
-        assert(!d_states.empty());
-        return *d_states.top();
-    }
-
-    std::stack<std::unique_ptr<PopulateState>> d_states;
-};
-
-template <typename T>
-void to_kjson(kjson::builder& builder, const T& v) {
+void to_kjson(kjson::builder &builder, const T &v) {
     if constexpr (is_optional_v<T>) {
         if (!v) {
             builder.with_none();
@@ -271,11 +188,42 @@ void to_kjson(kjson::builder& builder, const T& v) {
     }
 }
 
+template <typename T>
+void from_kjson(const kjson::document &doc, T &target) {
+    if constexpr (is_optional_v<T>) {
+        if (doc.is<composite::none>()) {
+            target.reset();
+        } else {
+            target.emplace();
+            from_kjson(doc, *target);
+        }
+    } else if constexpr (is_vector_v<T>) {
+        using U = typename T::value_type;
+
+        target.clear();
+        auto& as_seq = doc.as<composite::sequence>();
+        std::transform(as_seq.begin(), as_seq.end(), std::back_inserter(target), [](auto&& item){
+            U v{};
+            from_kjson(item, v);
+            return v;
+        });
+    } else {
+        target = doc.to<T>();
+    }
+}
+
 void to_kjson(kjson::builder &builder, const Nested &v) {
     builder.push_mapping();
     builder.key("s");
     to_kjson(builder, v.s);
     builder.pop();
+}
+
+void from_kjson(const kjson::document &doc, Nested &target) {
+    auto& m = doc.as<composite::mapping>();
+    if (auto it = m.find("s"); it != m.end()) {
+        from_kjson(it->second, target.s);
+    }
 }
 
 void to_kjson(kjson::builder &builder, const Compound &v) {
@@ -287,6 +235,44 @@ void to_kjson(kjson::builder &builder, const Compound &v) {
     builder.pop();
 }
 
+void from_kjson(const kjson::document &doc, Compound &target) {
+    auto& m = doc.as<composite::mapping>();
+    if (auto it = m.find("a"); it != m.end()) {
+        from_kjson(it->second, target.a);
+    }
+    if (auto it = m.find("b"); it != m.end()) {
+        from_kjson(it->second, target.b);
+    }
+}
+
+void to_kjson(kjson::builder &builder, const OptionalVectors &v) {
+    builder.push_mapping();
+    builder.key("v");
+    to_kjson(builder, v.v);
+    builder.pop();
+}
+
+void from_kjson(const kjson::document &doc, OptionalVectors &target) {
+    auto& m = doc.as<composite::mapping>();
+    if (auto it = m.find("v"); it != m.end()) {
+        from_kjson(it->second, target.v);
+    }
+}
+
+void to_kjson(kjson::builder &builder, const VectorTo &v) {
+    builder.push_mapping();
+    builder.key("v");
+    to_kjson(builder, v.v);
+    builder.pop();
+}
+
+void from_kjson(const kjson::document &doc, VectorTo &target) {
+    auto& m = doc.as<composite::mapping>();
+    if (auto it = m.find("v"); it != m.end()) {
+        from_kjson(it->second, target.v);
+    }
+}
+
 
 } // anonymous namespace
 
@@ -296,8 +282,8 @@ void to_json(std::ostream& out, const Nested &v) {
 }
 
 void from_json(std::istream& in, Nested &v) {
-    PopulateStateMachine visitor(std::make_unique<PopulateNestedState>(v));
-    check(kjson::load(in, visitor));
+    auto doc = kjson::load(in).expect("invalid json");
+    from_kjson(doc, v);
 }
 
 void to_json(std::ostream& out, const Compound &v) {
@@ -306,31 +292,71 @@ void to_json(std::ostream& out, const Compound &v) {
 }
 
 void from_json(std::istream& in, Compound &v) {
-    PopulateStateMachine visitor(std::make_unique<PopulateCompoundState>(v));
-    check(kjson::load(in, visitor));
+    auto doc = kjson::load(in).expect("invalid json");
+    from_kjson(doc, v);
 }
 
-} // namespace vt
+void to_json(std::ostream& out, const OptionalVectors &v) {
+    kjson::builder builder(out, true);
+    to_kjson(builder, v);
+}
+
+void from_json(std::istream& in, OptionalVectors &v) {
+    auto doc = kjson::load(in).expect("invalid json");
+    from_kjson(doc, v);
+}
+
+void to_json(std::ostream& out, const VectorTo &v) {
+    kjson::builder builder(out, true);
+    to_kjson(builder, v);
+}
+
+void from_json(std::istream& in, VectorTo &v) {
+    auto doc = kjson::load(in).expect("invalid json");
+    from_kjson(doc, v);
+}
+
+} // namespace sp
 
 namespace std {
 
-std::ostream &operator<<(std::ostream& out, const vt::Nested &v) {
-    vt::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::Nested &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, vt::Nested &v) {
-    vt::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::Nested &v) {
+    sp::from_json(in, v);
     return in;
 }
 
-std::ostream &operator<<(std::ostream& out, const vt::Compound &v) {
-    vt::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::Compound &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, vt::Compound &v) {
-    vt::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::Compound &v) {
+    sp::from_json(in, v);
+    return in;
+}
+
+std::ostream &operator<<(std::ostream& out, const sp::OptionalVectors &v) {
+    sp::to_json(out, v);
+    return out;
+}
+
+std::istream &operator>>(std::istream& in, sp::OptionalVectors &v) {
+    sp::from_json(in, v);
+    return in;
+}
+
+std::ostream &operator<<(std::ostream& out, const sp::VectorTo &v) {
+    sp::to_json(out, v);
+    return out;
+}
+
+std::istream &operator>>(std::istream& in, sp::VectorTo &v) {
+    sp::from_json(in, v);
     return in;
 }
 
@@ -382,12 +408,20 @@ std::size_t hash_combine(const Head &head, Tail... tail) {
 
 } // anonymous namespace
 
-std::size_t hash<vt::Nested>::operator()(const vt::Nested &v) const noexcept {
+std::size_t hash<sp::Nested>::operator()(const sp::Nested &v) const noexcept {
     return hash_combine(v.s);
 }
 
-std::size_t hash<vt::Compound>::operator()(const vt::Compound &v) const noexcept {
+std::size_t hash<sp::Compound>::operator()(const sp::Compound &v) const noexcept {
     return hash_combine(v.a, v.b);
+}
+
+std::size_t hash<sp::OptionalVectors>::operator()(const sp::OptionalVectors &v) const noexcept {
+    return hash_combine(v.v);
+}
+
+std::size_t hash<sp::VectorTo>::operator()(const sp::VectorTo &v) const noexcept {
+    return hash_combine(v.v);
 }
 
 } // namespace std
@@ -397,13 +431,21 @@ std::size_t hash<vt::Compound>::operator()(const vt::Compound &v) const noexcept
 
 namespace std {
 
-void swap(vt::Nested &a, vt::Nested &b) noexcept {
+void swap(sp::Nested &a, sp::Nested &b) noexcept {
     swap(a.s, b.s);
 }
 
-void swap(vt::Compound &a, vt::Compound &b) noexcept {
+void swap(sp::Compound &a, sp::Compound &b) noexcept {
     swap(a.a, b.a);
     swap(a.b, b.b);
+}
+
+void swap(sp::OptionalVectors &a, sp::OptionalVectors &b) noexcept {
+    swap(a.v, b.v);
+}
+
+void swap(sp::VectorTo &a, sp::VectorTo &b) noexcept {
+    swap(a.v, b.v);
 }
 
 } // namespace std
