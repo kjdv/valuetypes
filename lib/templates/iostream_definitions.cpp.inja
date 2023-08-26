@@ -25,113 +25,672 @@ struct is_vector<std::vector<T>> : std::true_type
 template <typename T>
 constexpr bool is_vector_v = is_vector<T>::value;
 
-## for typedef in typedefs
-void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v);
-void from_kjson(const kjson::document &doc, {{ typedef.name}} &target);
+namespace json {
 
-## endfor
+/*
+ * Grammar:
+ *
+ * json
+ *   element
+ *
+ * value
+ *   object | array | string | number | "true" | "false" |  "null"
+ *
+ * object
+ *   '{' ws '}' | '{' members '}'
+ *
+ * members
+ *   member | member ',' members
+ *
+ * member
+ *   ws string ws ':' element
+ *
+ * array
+ *   '[' ws ']' | '[' elements ']'
+ *
+ * elements
+ *   element | element ',' elements
+ *
+ * element
+ *   ws value ws
+ *
+ */
 
-template <typename T>
-void to_kjson(kjson::builder &builder, const T &v) {
-    if constexpr (is_optional_v<T>) {
-        if (!v) {
-            builder.with_none();
-        } else {
-            to_kjson(builder, *v);
+class json_error : public std::runtime_error {
+  public:
+    using std::runtime_error::runtime_error;
+};
+
+constexpr const int eof = std::char_traits<char>::eof();
+
+struct token {
+    enum class type_t {
+        e_start_mapping,  // {
+        e_end_mapping,    // }
+        e_start_sequence, // [
+        e_end_sequence,   // ]
+        e_separator,      // ,
+        e_mapper,         // :
+        e_string,
+        e_int,
+        e_uint,
+        e_float,
+        e_true,  // true
+        e_false, // false
+        e_null,  // null
+        e_eof,
+    };
+
+    type_t      tok{type_t::e_eof};
+    std::string value{};
+};
+
+constexpr std::string to_string(token::type_t tok) {
+    switch(tok) {
+    case token::type_t::e_start_mapping:
+        return "{";
+    case token::type_t::e_end_mapping:
+        return "}";
+    case token::type_t::e_start_sequence:
+        return "[";
+    case token::type_t::e_end_sequence:
+        return "]";
+    case token::type_t::e_separator:
+        return ",";
+    case token::type_t::e_mapper:
+        return ":";
+    case token::type_t::e_string:
+        return "quoted string";
+    case token::type_t::e_int:
+        return "integer";
+    case token::type_t::e_uint:
+        return "unsigned integer";
+    case token::type_t::e_float:
+        return "floating point number";
+    case token::type_t::e_true:
+        return "true";
+    case token::type_t::e_false:
+        return "false";
+    case token::type_t::e_null:
+        return "null";
+    case token::type_t::e_eof:
+        return "eof";
+    }
+    return "";
+}
+
+std::string to_string(const token& tok) {
+    return to_string(tok.tok) + (tok.value.empty() ? "" : std::string(" '") + tok.value + "'");
+}
+
+int non_ws(std::istream& str) {
+    char c = 0;
+    while(str.get(c)) {
+        if(!isspace(c))
+            return c;
+    }
+    return eof;
+}
+
+void extract_literal(std::istream& input, char head, std::string const& tail) {
+    for(char e : tail) {
+        int c = input.get();
+        if(c != e) {
+            throw json_error(std::string("expected literal ") + std::string(1, head) + tail + ", found char " + std::string(1, c));
         }
-    } else if constexpr (is_vector_v<T>) {
-        builder.push_sequence();
-        for (auto&& item : v) {
-            to_kjson(builder, item);
-        }
-        builder.pop();
-    } else {
-        builder.value(v);
     }
 }
 
+token extract_number(std::istream& input, char head) {
+    bool is_float    = false;
+    bool had_point   = false;
+    bool had_exp     = false;
+    bool is_negative = head == '-';
+
+    std::string value;
+    value += head;
+
+    int c;
+    while((c = input.peek()) != eof) {
+        if(c >= '0' && c <= '9') {
+            input.get();
+            value += c;
+        } else if(!had_point && c == '.') {
+            input.get();
+            value += c;
+            is_float  = true;
+            had_point = true;
+        } else if(!had_exp && (c == 'e' || c == 'E')) {
+            input.get();
+            value += c;
+
+            if(input.peek() == '+' || input.peek() == '-') {
+                c = input.get();
+                value += c;
+            }
+            is_float = true;
+            had_exp  = true;
+        } else
+            break;
+    }
+
+    return token{is_float ? token::type_t::e_float : (is_negative ? token::type_t::e_int : token::type_t::e_uint), std::move(value)};
+}
+
+constexpr bool is_hex(char c) noexcept {
+    return (c >= '0' && c <= '9') ||
+           (c >= 'a' && c <= 'f') ||
+           (c >= 'A' && c <= 'F');
+}
+
+constexpr uint8_t single_decode(char h) noexcept {
+    if(h >= '0' && h <= '9')
+        return h - '0';
+    else if(h >= 'a' && h <= 'f')
+        return h - 'a' + 10;
+    else if(h >= 'A' && h <= 'F')
+        return h - 'A' + 10;
+
+    assert(false && "unreachable: invalid hex char " && h);
+    return 0;
+}
+
+std::string extract_utf8(std::istream& input) {
+    char32_t wc = 0;
+    for(size_t i = 0; i < 4; ++i) {
+        int c = input.get();
+        if(c == eof)
+            break;
+
+        if(!is_hex(c))
+            throw json_error(std::string("expected hex digit, found ") + std::string(1, c));
+
+        wc <<= 4;
+        wc |= single_decode((char)c);
+    }
+
+    std::string value;
+
+    char byte;
+
+    byte = wc >> 24;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 16;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 8;
+    if(byte)
+        value += byte;
+
+    byte = wc & 0xff;
+    value += byte;
+
+    return value;
+}
+
+token extract_string(std::istream& input) {
+    std::string value;
+
+    int c;
+    while((c = input.get()) != eof && c != '"') {
+        if(c == '\\') {
+            c = input.get();
+            switch(c) {
+            case '/':
+            case '\\':
+            case '"':
+                value += c;
+                break;
+
+            case 'b':
+                value += '\b';
+                break;
+            case 'f':
+                value += '\f';
+                break;
+            case 'n':
+                value += '\n';
+                break;
+            case 'r':
+                value += '\r';
+                break;
+            case 't':
+                value += '\t';
+                break;
+
+            case 'u': {
+                value += extract_utf8(input);
+            } break;
+
+            default:
+                value += c;
+                break;
+            }
+        } else
+            value += c;
+    }
+
+    return token{token::type_t::e_string, std::move(value)};
+}
+
+token next_token(std::istream& input) {
+    int c = non_ws(input);
+    if(c != eof) {
+        switch(c) {
+        case '{':
+            return token{token::type_t::e_start_mapping};
+        case '}':
+            return token{token::type_t::e_end_mapping};
+        case '[':
+            return token{token::type_t::e_start_sequence};
+        case ']':
+            return token{token::type_t::e_end_sequence};
+        case ',':
+            return token{token::type_t::e_separator};
+        case ':':
+            return token{token::type_t::e_mapper};
+
+        case 't':
+            extract_literal(input, 't', "rue");
+            return token{token::type_t::e_true, "true"};
+        case 'f':
+            extract_literal(input, 'f', "alse");
+            return token{token::type_t::e_false, "false"};
+        case 'n':
+            extract_literal(input, 'n', "ull");
+            return token{token::type_t::e_null, "null"};
+
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case '-':
+        case '+':
+            return extract_number(input, c);
+
+        case '"':
+            return extract_string(input);
+
+        default:
+            throw json_error(std::string("unexpected token ") + std::string(1, c));
+        }
+    }
+    return token{token::type_t::e_eof};
+}
+
+class tokenizer {
+  public:
+    tokenizer(std::istream& input)
+      : d_input(input) {}
+
+    token next() {
+        if(d_next) {
+            token t = std::move(d_next.value());
+            d_next.reset();
+            return t;
+        }
+        return next_token(d_input);
+    }
+
+    const token& peek() {
+        if(!d_next) {
+            d_next = next_token(d_input);
+        }
+        return d_next.value();
+    }
+
+  private:
+    std::istream&        d_input;
+    std::optional<token> d_next;
+};
+
+void expect(token::type_t e, const token& actual) {
+    if(actual.tok != e) {
+        throw json_error(std::string("expected ") + to_string(e) + ", found " + to_string(actual));
+    }
+}
+
+token expect_and_consume(tokenizer& input, token::type_t e) {
+    auto t = input.next();
+    expect(e, t);
+    return t;
+}
+
+struct sink {};
+
 template <typename T>
-void from_kjson(const kjson::document &doc, T &target) {
-    if constexpr (is_optional_v<T>) {
-        if (doc.is<composite::none>()) {
+void value(tokenizer& input, T& target);
+
+template <typename T>
+void value(tokenizer& input, sink target);
+
+template <typename T>
+void object(tokenizer& input, T& target);
+
+template <typename T>
+void members(tokenizer& input, T& target);
+
+template <typename T>
+void member(tokenizer& input, T& target);
+
+template <typename T>
+void array(tokenizer& input, T& target);
+
+template <typename T>
+void element(tokenizer& input, T& target);
+
+template <typename T>
+void elements(tokenizer& input, T& target);
+
+template <typename T>
+void value(tokenizer& input, T& target) {
+    if constexpr(is_optional_v<T>) {
+        if(input.peek().tok == token::type_t::e_null) {
             target.reset();
+            input.next();
         } else {
             target.emplace();
-            from_kjson(doc, *target);
+            value(input, *target);
         }
-    } else if constexpr (is_vector_v<T>) {
-        using U = typename T::value_type;
-
-        target.clear();
-        auto& as_seq = doc.as<composite::sequence>();
-        std::transform(as_seq.begin(), as_seq.end(), std::back_inserter(target), [](auto&& item){
-            U v{};
-            from_kjson(item, v);
-            return v;
-        });
+    } else if constexpr(is_vector_v<T>) {
+        array(input, target);
+    } else if constexpr(std::is_same_v<std::string, T>) {
+        auto tok = input.next();
+        expect(token::type_t::e_string, tok);
+        target = std::move(tok.value);
+    } else if constexpr(std::is_same_v<bool, T>) {
+        auto tok = input.next();
+        switch(tok.tok) {
+        case token::type_t::e_true:
+            target = true;
+            break;
+        case token::type_t::e_false:
+            target = false;
+            break;
+        default:
+            throw json_error("expected 'true' or 'false', found: " + to_string(tok));
+        }
+    } else if constexpr(std::is_integral_v<T> && std::is_unsigned_v<T>) {
+        auto tok = input.next();
+        expect(token::type_t::e_uint, tok);
+        char* c;
+        target = std::strtoull(tok.value.c_str(), &c, 10);
+    } else if constexpr(std::is_integral_v<T>) {
+        auto tok = input.next();
+        switch(tok.tok) {
+        case token::type_t::e_uint: {
+            char* c;
+            target = std::strtoull(tok.value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_int: {
+            char* c;
+            target = std::strtoll(tok.value.c_str(), &c, 10);
+            break;
+        }
+        default:
+            throw json_error("expected integer, found: " + to_string(tok));
+        }
+    } else if constexpr(std::is_floating_point_v<T>) {
+        auto tok = input.next();
+        switch(tok.tok) {
+        case token::type_t::e_uint: {
+            char* c;
+            target = std::strtoull(tok.value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_int: {
+            char* c;
+            target = std::strtoll(tok.value.c_str(), &c, 10);
+            break;
+        }
+        case token::type_t::e_float: {
+            char* c;
+            target = std::strtod(tok.value.c_str(), &c);
+            break;
+        }
+        default:
+            throw json_error("expected number, found: " + to_string(tok));
+        }
     } else {
-        target = doc.to<T>();
+        static_assert(std::is_class_v<T>, "type deduction failed");
+        object(input, target);
     }
+}
+
+void value(tokenizer& input, sink target) {
+    auto& tok = input.peek();
+    switch(tok.tok) {
+    case token::type_t::e_start_mapping:
+        object(input, target);
+        break;
+    case token::type_t::e_start_sequence: {
+        std::vector<sink> v;
+        array(input, v);
+        break;
+    }
+    case token::type_t::e_null:
+    case token::type_t::e_false:
+    case token::type_t::e_true:
+    case token::type_t::e_uint:
+    case token::type_t::e_int:
+    case token::type_t::e_float:
+    case token::type_t::e_string:
+        // consume and ignore
+        input.next();
+        break;
+    default:
+        throw json_error(std::string("expected value, found " + to_string(tok)));
+    }
+}
+
+// forward declarations
+## for typedef in typedefs
+void member(tokenizer &input, {{ typedef.name }} &target);
+## for member in typedef.members
+## if member.value_types
+struct {{ typedef.name }}_{{ member.name }} {
+    {{ member.type }}& base;
+};
+void member(tokenizer& input, {{ typedef.name }}_{{ member.name }}& target);
+## endif
+## endfor
+## endfor
+
+template <typename T>
+void object(tokenizer& input, T& target) {
+    // object
+    //   '{' ws '}' | '{' members '}'
+    expect_and_consume(input, token::type_t::e_start_mapping);
+
+    if(input.peek().tok == token::type_t::e_string) {
+        members(input, target);
+    }
+
+    expect_and_consume(input, token::type_t::e_end_mapping);
+}
+
+template <typename T>
+void array(tokenizer& input, T& target) {
+    // array
+    //   '[' ws ']' | '[' elements ']'
+
+    expect_and_consume(input, token::type_t::e_start_sequence);
+
+    if(input.peek().tok != token::type_t::e_end_sequence) {
+        elements(input, target);
+    }
+
+    expect_and_consume(input, token::type_t::e_end_sequence);
+}
+
+template <typename T>
+void elements(tokenizer& input, T& target) {
+    // elements
+    //   element | element ',' elements
+    static_assert(is_vector_v<T>, "expected a vector");
+
+    target.clear();
+    while(true) {
+        target.emplace_back();
+        element(input, target.back());
+
+        if(input.peek().tok != token::type_t::e_separator) {
+            break;
+        }
+        input.next();
+    }
+}
+
+template <typename T>
+void element(tokenizer& input, T& target) {
+    // element
+    //   ws value ws
+    value(input, target);
+}
+
+template <typename T>
+void members(tokenizer& input, T& target) {
+    // members
+    //   member | member ',' members
+    while(true) {
+        member(input, target);
+        if(input.peek().tok != token::type_t::e_separator) {
+            break;
+        }
+        input.next();
+    }
+}
+
+token extract_key(tokenizer& input) {
+    auto tok = expect_and_consume(input, token::type_t::e_string);
+    expect_and_consume(input, token::type_t::e_mapper);
+    return tok;
+}
+
+template <typename T>
+void member(tokenizer& input, T& target) {
+    // member
+    //   ws string ws ':' element
+
+    extract_key(input);
+    element(input, target);
 }
 
 ## for typedef in typedefs
-void to_kjson(kjson::builder &builder, const {{ typedef.name }} &v) {
-    builder.push_mapping();
+void member(tokenizer &input, {{ typedef.name }} &target) {
+    auto key = extract_key(input);
 ## for member in typedef.members
+    {% if not loop.is_first %}else {% endif %}if(key.value == "{{ member.name }}") {
 ## if member.value_types
-    builder.key("{{ member.name }}");
-    builder.push_mapping();
-    std::visit([&builder](auto&& item) {
-            using T = std::decay_t<decltype(item)>;
-
-## for vt in member.value_types
-            {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type }}>) {
-                builder.key("{{ vt.name }}");
-                to_kjson(builder, item);
-            }
-## endfor
-    }, v.{{ member.name}});
-    builder.pop();
-## else
-    builder.key("{{ member.name }}");
-    to_kjson(builder, v.{{ member.name }});
-## endif 
-## endfor
-    builder.pop();
-}
-
-void from_kjson(const kjson::document &doc, {{ typedef.name}} &target) {
-    auto& m = doc.as<composite::mapping>();
-## for member in typedef.members
-    if (auto it = m.find("{{ member.name}}"); it != m.end()) {
-## if member.value_types
-        auto& v = it->second.as<composite::mapping>();
-## for vt in member.value_types
-        {% if not loop.is_first %}else {% endif %} if(auto it2 = v.find("{{ vt.name }}"); it2 != v.end()) {
-            auto& t = target.{{ member.name }}.emplace<{{ vt.type }}>();
-            from_kjson(it2->second, t);
-        }
-## endfor
-## else
-        from_kjson(it->second, target.{{ member.name }});
+        {{ typedef.name }}_{{ member.name }} t{target.{{ member.name }}};
+        element(input, t);
+## else 
+        element(input, target.{{ member.name }});
 ## endif
+    } 
+## endfor 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+## for member in typedef.members
+## if member.value_types
+
+void member(tokenizer& input, {{ typedef.name }}_{{ member.name }}& target) {
+    auto key = extract_key(input);
+## for vt in member.value_types
+    {% if not loop.is_first %}else {% endif %}if(key.value == "{{ vt.name }}") {
+        target.base.emplace<{{ vt.type }}>();
+        element(input, std::get<{{ vt.type }}>(target.base));
     }
 ## endfor
+    else {
+        sink s;
+        element(input, s);
+    }
 }
-
+## endif 
 ## endfor
+## endfor
+
+} // namespace json
+
+template <typename T>
+void to_json(std::ostream& out, const T& v) {
+    if constexpr (is_optional_v<T>) {
+        if (!v) {
+            out << "null";
+        } else {
+            to_json(out, *v);
+        }
+    } else if constexpr (is_vector_v<T>) {
+        out << "[ ";
+        bool first{true};
+        for (auto&& item : v) {
+            if(first) {
+                first = false;
+            } else {
+                out << ", ";
+            }
+            to_json(out, item);
+        }
+        out << ']';
+    } else if constexpr(std::is_same_v<bool, T>) {
+        out << std::boolalpha << v;
+    } else if constexpr(std::is_floating_point_v<T>) {
+        out.precision(std::numeric_limits<double>::max_digits10);
+        out << v;
+    } else if constexpr(std::is_same_v<std::string, T>) {
+        out << std::quoted(v);
+    } else {
+        out << v;
+    }
+}
 
 } // anonymous namespace
 
 ## for typedef in typedefs
-void to_json(std::ostream& out, const {{typedef.name }} &v) {
-    kjson::builder builder(out, true);
-    to_kjson(builder, v);
+void to_json(std::ostream& out, const {{ typedef.name }} &v) {
+    out << "{ ";
+## for member in typedef.members
+## if not loop.is_first
+    out << ", ";
+## endif 
+    out << std::quoted("{{ member.name }}") << ": ";
+## if member.value_types
+    out << "{ ";
+    std::visit([&out](auto&& item) {
+        using T = std::decay_t<decltype(item)>;
+
+## for vt in member.value_types
+        {% if not loop.is_first %}else {% endif %} if constexpr (std::is_same_v<T, {{ vt.type }}>) {
+            out << std::quoted("{{ vt.name }}") << ": ";
+            to_json(out, item);
+        }
+## endfor
+    }, v.{{ member.name }});
+    out << '}';
+## else 
+    to_json(out, v.{{ member.name }});
+## endif
+## endfor
+    out << '}';
 }
 
 void from_json(std::istream& in, {{ typedef.name }} &v) {
-    auto doc = kjson::load(in).expect("invalid json");
-    from_kjson(doc, v);
+    json::tokenizer input(in);
+    json::value(input, v);
 }
 
 ## endfor

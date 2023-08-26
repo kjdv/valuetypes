@@ -1,13 +1,13 @@
 #include "valuetypes.h"
-#include <algorithm>
 #include <cassert>
-#include <iomanip>
-#include <limits>
 #include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <algorithm>
+#include <iomanip>
+#include <limits>
 
 namespace sp { 
 
@@ -48,6 +48,16 @@ bool operator==(const VectorTo &a, const VectorTo &b) noexcept {
 }
 
 bool operator!=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(a == b);
+}
+
+bool operator==(const Variants &a, const Variants &b) noexcept {
+    return
+        std::tie(a.v) ==
+        std::tie(b.v);
+}
+
+bool operator!=(const Variants &a, const Variants &b) noexcept {
     return !(a == b);
 }
 
@@ -121,6 +131,24 @@ bool operator>(const VectorTo &a, const VectorTo &b) noexcept {
 }
 
 bool operator>=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(a < b);
+}
+
+bool operator<(const Variants &a, const Variants &b) noexcept {
+    return
+        std::tie(a.v) <
+        std::tie(b.v);
+}
+
+bool operator<=(const Variants &a, const Variants &b) noexcept {
+    return !(b < a);
+}
+
+bool operator>(const Variants &a, const Variants &b) noexcept {
+    return b < a;
+}
+
+bool operator>=(const Variants &a, const Variants &b) noexcept {
     return !(a < b);
 }
 
@@ -624,10 +652,16 @@ void value(tokenizer& input, sink target) {
 }
 
 // forward declarations
-void member(tokenizer& input, sp::Nested& target);
-void member(tokenizer& input, sp::Compound& target);
-void member(tokenizer& input, sp::OptionalVectors& target);
-void member(tokenizer& input, sp::VectorTo& target);
+void member(tokenizer &input, Nested &target);
+void member(tokenizer &input, Compound &target);
+void member(tokenizer &input, OptionalVectors &target);
+void member(tokenizer &input, VectorTo &target);
+void member(tokenizer &input, Variants &target);
+
+struct Variants_v {
+    std::variant<int, std::string, std::optional<Nested>>& target;
+};
+void member(tokenizer& input, Variants_v& target);
 
 template <typename T>
 void object(tokenizer& input, T& target) {
@@ -640,76 +674,6 @@ void object(tokenizer& input, T& target) {
     }
 
     expect_and_consume(input, token::type_t::e_end_mapping);
-}
-
-template <typename T>
-void members(tokenizer& input, T& target) {
-    // members
-    //   member | member ',' members
-    while(true) {
-        member(input, target);
-        if(input.peek().tok != token::type_t::e_separator) {
-            break;
-        }
-        input.next();
-    }
-}
-
-token extract_key(tokenizer& input) {
-    auto tok = expect_and_consume(input, token::type_t::e_string);
-    expect_and_consume(input, token::type_t::e_mapper);
-    return tok;
-}
-
-template <typename T>
-void member(tokenizer& input, T& target) {
-    // member
-    //   ws string ws ':' element
-
-    extract_key(input);
-    element(input, target);
-}
-
-void member(tokenizer& input, sp::Nested& target) {
-    auto key = extract_key(input);
-    if(key.value == "s") {
-        element(input, target.s);
-    } else {
-        sink s;
-        element(input, s);
-    }
-}
-
-void member(tokenizer& input, sp::Compound& target) {
-    auto key = extract_key(input);
-    if(key.value == "a") {
-        element(input, target.a);
-    } else if(key.value == "b") {
-        element(input, target.b);
-    } else {
-        sink s;
-        element(input, s);
-    }
-}
-
-void member(tokenizer& input, sp::OptionalVectors& target) {
-    auto key = extract_key(input);
-    if(key.value == "v") {
-        element(input, target.v);
-    } else {
-        sink s;
-        element(input, s);
-    }
-}
-
-void member(tokenizer& input, sp::VectorTo& target) {
-    auto key = extract_key(input);
-    if(key.value == "v") {
-        element(input, target.v);
-    } else {
-        sink s;
-        element(input, s);
-    }
 }
 
 template <typename T>
@@ -749,6 +713,105 @@ void element(tokenizer& input, T& target) {
     // element
     //   ws value ws
     value(input, target);
+}
+
+template <typename T>
+void members(tokenizer& input, T& target) {
+    // members
+    //   member | member ',' members
+    while(true) {
+        member(input, target);
+        if(input.peek().tok != token::type_t::e_separator) {
+            break;
+        }
+        input.next();
+    }
+}
+
+token extract_key(tokenizer& input) {
+    auto tok = expect_and_consume(input, token::type_t::e_string);
+    expect_and_consume(input, token::type_t::e_mapper);
+    return tok;
+}
+
+template <typename T>
+void member(tokenizer& input, T& target) {
+    // member
+    //   ws string ws ':' element
+
+    extract_key(input);
+    element(input, target);
+}
+
+void member(tokenizer &input, Nested &target) {
+    auto key = extract_key(input);
+    if(key.value == "s") {
+        element(input, target.s);
+    } 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+void member(tokenizer &input, Compound &target) {
+    auto key = extract_key(input);
+    if(key.value == "a") {
+        element(input, target.a);
+    } 
+    else if(key.value == "b") {
+        element(input, target.b);
+    } 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+void member(tokenizer &input, OptionalVectors &target) {
+    auto key = extract_key(input);
+    if(key.value == "v") {
+        element(input, target.v);
+    } 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+void member(tokenizer &input, VectorTo &target) {
+    auto key = extract_key(input);
+    if(key.value == "v") {
+        element(input, target.v);
+    } 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+void member(tokenizer &input, Variants &target) {
+    auto key = extract_key(input);
+    if(key.value == "v") {
+        Variants_v t{target.v};
+        element(input, t);
+    } else {
+        sink s;
+        element(input, s);
+    }
+}
+
+void member(tokenizer& input, Variants_v& target) {
+    auto key = extract_key(input);
+    if(key.value == "int") {
+        target.target.emplace<int>();
+        element(input, std::get<int>(target.target));
+    } else if(key.value == "custom_str") {
+        target.target.emplace<std::string>();
+        element(input, std::get<std::string>(target.target));
+    } else if(key.value == "std::optional<Nested>") {
+        target.target.emplace<std::optional<Nested>>();
+        element(input, std::get<std::optional<Nested>>(target.target));
+    } else {
+        sink s;
+        element(input, s);
+    }
 }
 
 } // namespace json
@@ -803,7 +866,8 @@ void to_json(std::ostream& out, const Compound &v) {
     out << "{ ";
     out << std::quoted("a") << ':';
     to_json(out, v.a);
-    out << ", " << std::quoted("b") << ':';
+    out << ", ";
+    out << std::quoted("b") << ':';
     to_json(out, v.b);
     out << " }";
 }
@@ -833,6 +897,34 @@ void to_json(std::ostream& out, const VectorTo &v) {
 }
 
 void from_json(std::istream& in, VectorTo &v) {
+    json::tokenizer input(in);
+    json::value(input, v);
+}
+
+void to_json(std::ostream& out, const Variants &v) {
+    out << "{ ";
+    out << std::quoted("v") << ": ";
+    out << " { ";
+    std::visit([&out](auto&& item) {
+        using T = std::decay_t<decltype(item)>;
+
+        if constexpr (std::is_same_v<T, int>) {
+            out << std::quoted("int") << ": ";
+            to_json(out, item);
+        } else if constexpr(std::is_same_v<T, std::string>) {
+            out << std::quoted("custom_str") << ": ";
+            to_json(out, item);
+        } else {
+            out << std::quoted("std::optional<Nested>") << ": ";
+            to_json(out, item);
+        }
+    },
+               v.v);
+    out << " }";
+    out << " }";
+}
+
+void from_json(std::istream& in, Variants &v) {
     json::tokenizer input(in);
     json::value(input, v);
 }
@@ -877,6 +969,16 @@ std::ostream &operator<<(std::ostream& out, const sp::VectorTo &v) {
 }
 
 std::istream &operator>>(std::istream& in, sp::VectorTo &v) {
+    sp::from_json(in, v);
+    return in;
+}
+
+std::ostream &operator<<(std::ostream& out, const sp::Variants &v) {
+    sp::to_json(out, v);
+    return out;
+}
+
+std::istream &operator>>(std::istream& in, sp::Variants &v) {
     sp::from_json(in, v);
     return in;
 }
@@ -945,6 +1047,10 @@ std::size_t hash<sp::VectorTo>::operator()(const sp::VectorTo &v) const noexcept
     return hash_combine(v.v);
 }
 
+std::size_t hash<sp::Variants>::operator()(const sp::Variants &v) const noexcept {
+    return hash_combine(v.v);
+}
+
 } // namespace std
 
 // end hash_definitions.cpp.inja
@@ -966,6 +1072,10 @@ void swap(sp::OptionalVectors &a, sp::OptionalVectors &b) noexcept {
 }
 
 void swap(sp::VectorTo &a, sp::VectorTo &b) noexcept {
+    swap(a.v, b.v);
+}
+
+void swap(sp::Variants &a, sp::Variants &b) noexcept {
     swap(a.v, b.v);
 }
 

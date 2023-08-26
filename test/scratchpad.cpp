@@ -255,4 +255,143 @@ RC_GTEST_PROP(ScratchpadV, nestedMarshalling, (vector<string> a)) {
     RC_ASSERT(v1 == v2);
 }
 
+sp::Variants construct(int n, string s, int c) {
+    sp::Variants v;
+    if(c & 1) {
+        v.v.emplace<string>(std::move(s));
+    } else if(c & 2) {
+        if(c & 4) {
+            v.v.emplace<optional<sp::Nested>>();
+        } else {
+            v.v.emplace<optional<sp::Nested>>(sp::Nested{to_string(n + c)});
+        }
+    } else {
+        v.v.emplace<int>(n);
+    }
+
+    return v;
+}
+
+RC_GTEST_PROP(ScratchpadVr, totalOrdering, (int n1, string s1, int n2, string s2, int c1, int c2)) {
+    auto v1 = construct(n1, s1, c1);
+    auto v2 = construct(n2, s2, c2);
+
+    auto unequal = [](const sp::Variants& smaller, const sp::Variants& larger) {
+        RC_ASSERT(smaller < larger);
+        RC_ASSERT(smaller <= larger);
+        RC_ASSERT(!(smaller > larger));
+        RC_ASSERT(!(smaller >= larger));
+        RC_ASSERT(!(larger < smaller));
+        RC_ASSERT(!(larger <= smaller));
+        RC_ASSERT(larger > smaller);
+        RC_ASSERT(larger >= smaller);
+        RC_ASSERT(!(smaller == larger));
+        RC_ASSERT(smaller != larger);
+        RC_ASSERT(!(larger == smaller));
+        RC_ASSERT(larger != smaller);
+    };
+    auto equal = [](const sp::Variants& a, const sp::Variants& b) {
+        RC_ASSERT(!(a < b));
+        RC_ASSERT(a <= b);
+        RC_ASSERT(!(a > b));
+        RC_ASSERT(a >= b);
+        RC_ASSERT(!(b < a));
+        RC_ASSERT(b <= a);
+        RC_ASSERT(!(b > a));
+        RC_ASSERT(b >= a);
+        RC_ASSERT(a == b);
+        RC_ASSERT(b == a);
+        RC_ASSERT(!(a != b));
+        RC_ASSERT(!(b != a));
+    };
+
+    if(v1 < v2) {
+        unequal(v1, v2);
+    } else if(v2 < v1) {
+        unequal(v2, v1);
+    } else {
+        equal(v1, v2);
+    }
+}
+
+RC_GTEST_PROP(ScratchpadVr, hashing, (int n1, string s1, int n2, string s2, int c1, int c2)) {
+    auto v1 = construct(n1, s1, c1);
+    auto v2 = construct(n2, s2, c2);
+
+    auto h1 = std::hash<sp::Variants>{}(v1);
+    auto h2 = std::hash<sp::Variants>{}(v2);
+
+    if(v1 == v2) {
+        RC_ASSERT(h1 == h2);
+    } else {
+        // failure is unlikely but possible, how to assert for that?
+        RC_ASSERT(h1 != h2);
+    }
+}
+
+TEST(ScratchpadVr, hashIsUsableForContainers) {
+    sp::Variants v1;
+    sp::Variants v2;
+    v2.v.emplace<int>(1);
+
+    std::unordered_set<sp::Variants> s;
+
+    EXPECT_EQ(s.end(), s.find(v1));
+    EXPECT_EQ(s.end(), s.find(v2));
+
+    s.insert(v1);
+
+    EXPECT_NE(s.end(), s.find(v1));
+    EXPECT_EQ(s.end(), s.find(v2));
+
+    s.insert(v2);
+
+    EXPECT_NE(s.end(), s.find(v1));
+    EXPECT_NE(s.end(), s.find(v2));
+}
+
+TEST(ScratchpadVr, extraction1) {
+    std::stringstream stream(R"({ "v": { "int": 123 } })");
+    sp::Variants      v;
+
+    stream >> v;
+    EXPECT_EQ(123, std::get<int>(v.v));
+}
+
+TEST(ScratchpadVr, extraction2) {
+    std::stringstream stream(R"({ "v": { "custom_str": "abc" } })");
+    sp::Variants      v;
+
+    stream >> v;
+    EXPECT_EQ("abc", std::get<std::string>(v.v));
+}
+
+TEST(ScratchpadVr, extraction3) {
+    std::stringstream stream(R"({ "v": { "std::optional<Nested>": null } })");
+    sp::Variants      v;
+
+    stream >> v;
+    EXPECT_FALSE(std::get<std::optional<sp::Nested>>(v.v));
+}
+
+TEST(ScratchpadVr, extraction4) {
+    std::stringstream stream(R"({ "v": { "std::optional<Nested>": { "s": "abc" } } })");
+    sp::Variants      v;
+
+    stream >> v;
+    EXPECT_EQ("abc", std::get<std::optional<sp::Nested>>(v.v)->s);
+}
+
+RC_GTEST_PROP(ScratchpadVr, marshalling, (int n, string s, int c)) {
+    auto v1 = construct(n, std::move(s), c);
+
+    std::stringstream stream;
+    stream << v1;
+
+    sp::Variants v2;
+    stream >> v2;
+
+    RC_ASSERT(v1 == v2);
+}
+
 } // namespace

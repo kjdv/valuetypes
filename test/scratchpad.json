@@ -35,5 +35,20 @@
         "type": "Nested"
       }
     }]
+  },{
+    "name": "Variants",
+    "members": [{
+      "name": "v",
+      "type": "variant",
+      "value_types": [{
+        "type": "int"
+      }, {
+        "type": "string",
+        "name": "custom_str"
+      }, {
+        "type": "Nested",
+        "optional": true
+      }]
+    }]
   }]
 }
