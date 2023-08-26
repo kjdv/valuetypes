@@ -1,10 +1,8 @@
 #include "valuetypes.h"
 #include <algorithm>
 #include <cassert>
-#include <composite/make.hh>
 #include <iomanip>
-#include <kjson/builder.hh>
-#include <kjson/json.hh>
+#include <limits>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -593,10 +591,9 @@ void value(tokenizer& input, T& target) {
         default:
             throw json_error("expected number, found: " + to_string(tok));
         }
-    } else if constexpr(std::is_class_v<T>) {
-        object(input, target);
     } else {
-        assert(false && "type deduction failed");
+        static_assert(std::is_class_v<T>, "type deduction failed");
+        object(input, target);
     }
 }
 
@@ -756,64 +753,45 @@ void element(tokenizer& input, T& target) {
 
 } // namespace json
 
-void to_kjson(kjson::builder& builder, const Nested& v);
-void to_kjson(kjson::builder& builder, const Compound& v);
-void to_kjson(kjson::builder &builder, const OptionalVectors &v);
-void to_kjson(kjson::builder& builder, const VectorTo& v);
-
 template <typename T>
-void to_kjson(kjson::builder& builder, const T& v) {
+void to_json(std::ostream& out, const T& v) {
     if constexpr (is_optional_v<T>) {
         if (!v) {
-            builder.with_none();
+            out << "null";
         } else {
-            to_kjson(builder, *v);
+            to_json(out, *v);
         }
     } else if constexpr (is_vector_v<T>) {
-        builder.push_sequence();
+        out << "[ ";
+        bool first{true};
         for (auto&& item : v) {
-            to_kjson(builder, item);
+            if(first) {
+                first = false;
+            } else {
+                out << ", ";
+            }
+            to_json(out, item);
         }
-        builder.pop();
+        out << " ]";
+    } else if constexpr(std::is_same_v<bool, T>) {
+        out << std::boolalpha << v;
+    } else if constexpr(std::is_floating_point_v<T>) {
+        out.precision(std::numeric_limits<double>::max_digits10);
+        out << v;
+    } else if constexpr(std::is_same_v<std::string, T>) {
+        out << std::quoted(v);
     } else {
-        builder.value(v);
+        out << v;
     }
-}
-
-void to_kjson(kjson::builder& builder, const Nested& v) {
-    builder.push_mapping();
-    builder.key("s");
-    to_kjson(builder, v.s);
-    builder.pop();
-}
-
-void to_kjson(kjson::builder &builder, const Compound &v) {
-    builder.push_mapping();
-    builder.key("a");
-    to_kjson(builder, v.a);
-    builder.key("b");
-    to_kjson(builder, v.b);
-    builder.pop();
-}
-
-void to_kjson(kjson::builder& builder, const OptionalVectors& v) {
-    builder.push_mapping();
-    builder.key("v");
-    to_kjson(builder, v.v);
-    builder.pop();
-}
-void to_kjson(kjson::builder &builder, const VectorTo &v) {
-    builder.push_mapping();
-    builder.key("v");
-    to_kjson(builder, v.v);
-    builder.pop();
 }
 
 } // anonymous namespace
 
 void to_json(std::ostream& out, const Nested &v) {
-    kjson::builder builder(out, true);
-    to_kjson(builder, v);
+    out << "{ ";
+    out << std::quoted("s") << ':';
+    to_json(out, v.s);
+    out << " }";
 }
 
 void from_json(std::istream& in, Nested &v) {
@@ -822,8 +800,12 @@ void from_json(std::istream& in, Nested &v) {
 }
 
 void to_json(std::ostream& out, const Compound &v) {
-    kjson::builder builder(out, true);
-    to_kjson(builder, v);
+    out << "{ ";
+    out << std::quoted("a") << ':';
+    to_json(out, v.a);
+    out << ", " << std::quoted("b") << ':';
+    to_json(out, v.b);
+    out << " }";
 }
 
 void from_json(std::istream& in, Compound &v) {
@@ -832,8 +814,10 @@ void from_json(std::istream& in, Compound &v) {
 }
 
 void to_json(std::ostream& out, const OptionalVectors &v) {
-    kjson::builder builder(out, true);
-    to_kjson(builder, v);
+    out << "{ ";
+    out << std::quoted("v") << ':';
+    to_json(out, v.v);
+    out << " }";
 }
 
 void from_json(std::istream& in, OptionalVectors &v) {
@@ -842,8 +826,10 @@ void from_json(std::istream& in, OptionalVectors &v) {
 }
 
 void to_json(std::ostream& out, const VectorTo &v) {
-    kjson::builder builder(out, true);
-    to_kjson(builder, v);
+    out << "{ ";
+    out << std::quoted("v") << ':';
+    to_json(out, v.v);
+    out << " }";
 }
 
 void from_json(std::istream& in, VectorTo &v) {
