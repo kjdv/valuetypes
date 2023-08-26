@@ -405,7 +405,7 @@ void value(tokenizer& input, T& target) {
         array(input, target);
     } else if constexpr(std::is_same_v<std::string, T>) {
         auto tok = input.next();
-        expect(token::type_t::e_string, tok);
+        // todo: in grammar this has to be a non-array, non-object value (but can be bool, int, string, float)
         target = std::move(tok.value);
     } else if constexpr(std::is_same_v<bool, T>) {
         auto tok = input.next();

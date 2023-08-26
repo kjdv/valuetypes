@@ -1,5 +1,3 @@
-find_package(Kjson CONFIG REQUIRED)
-
 function(generate_value_type name)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.h ${CMAKE_CURRENT_BINARY_DIR}/${name}/valuetypes.cpp
@@ -12,7 +10,6 @@ function(generate_value_type name)
     target_include_directories(${name}
         PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
     )
-    target_link_libraries(${name} PRIVATE Kjson::kjson)
 endfunction()
 
 generate_value_type(point)

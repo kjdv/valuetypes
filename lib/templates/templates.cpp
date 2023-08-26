@@ -32,11 +32,6 @@ inja::Environment make_env() {
 
 std::string_view cmakelists() noexcept {
     return R"(add_library({{ options.library_name }} {{ options.base_filename }}.h {{ options.base_filename }}.cpp)
-
-## if options.json
-find_package(Kjson CONFIG REQUIRED)
-target_link_libraries({{ options.library_name }} PRIVATE Kjson::kjson)
-## endif
 )";
 }
 
