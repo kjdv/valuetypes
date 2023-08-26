@@ -156,6 +156,243 @@ struct is_vector<std::vector<T>> : std::true_type
 template <typename T>
 constexpr bool is_vector_v = is_vector<T>::value;
 
+namespace json {
+
+class json_error : public std::runtime_error {
+  public:
+    using std::runtime_error::runtime_error;
+};
+
+constexpr const int eof = std::char_traits<char>::eof();
+
+struct token {
+    enum class type_t {
+        e_start_mapping,  // {
+        e_end_mapping,    // }
+        e_start_sequence, // [
+        e_end_sequence,   // ]
+        e_separator,      // ,
+        e_mapper,         // :
+        e_string,
+        e_int,
+        e_uint,
+        e_float,
+        e_true,  // true
+        e_false, // false
+        e_null,  // null
+        e_eof,
+    };
+
+    type_t      tok{type_t::e_eof};
+    std::string value{};
+};
+
+int non_ws(std::istream& str) {
+    char c = 0;
+    while(str.get(c)) {
+        if(!isspace(c))
+            return c;
+    }
+    return eof;
+}
+
+void extract_literal(std::istream& input, char head, std::string const& tail) {
+    for(char e : tail) {
+        int c = input.get();
+        if(c != e) {
+            throw json_error(std::string("expected literal ") + std::string(1, head) + tail + ", found char " + std::string(1, c));
+        }
+    }
+}
+
+token extract_number(std::istream& input, char head) {
+    bool is_float    = false;
+    bool had_point   = false;
+    bool had_exp     = false;
+    bool is_negative = head == '-';
+
+    std::string value;
+    value += head;
+
+    int c;
+    while((c = input.peek()) != eof) {
+        if(c >= '0' && c <= '9') {
+            input.get();
+            value += c;
+        } else if(!had_point && c == '.') {
+            input.get();
+            value += c;
+            is_float  = true;
+            had_point = true;
+        } else if(!had_exp && (c == 'e' || c == 'E')) {
+            input.get();
+            value += c;
+
+            if(input.peek() == '+' || input.peek() == '-') {
+                c = input.get();
+                value += c;
+            }
+            is_float = true;
+            had_exp  = true;
+        } else
+            break;
+    }
+
+    return token{is_float ? token::type_t::e_float : (is_negative ? token::type_t::e_int : token::type_t::e_uint), std::move(value)};
+}
+
+constexpr bool is_hex(char c) noexcept {
+    return (c >= '0' && c <= '9') ||
+           (c >= 'a' && c <= 'f') ||
+           (c >= 'A' && c <= 'F');
+}
+
+constexpr uint8_t single_decode(char h) noexcept {
+    if(h >= '0' && h <= '9')
+        return h - '0';
+    else if(h >= 'a' && h <= 'f')
+        return h - 'a' + 10;
+    else if(h >= 'A' && h <= 'F')
+        return h - 'A' + 10;
+
+    assert(false && "unreachable: invalid hex char " && h);
+    return 0;
+}
+
+std::string extract_utf8(std::istream& input) {
+    char32_t wc = 0;
+    for(size_t i = 0; i < 4; ++i) {
+        int c = input.get();
+        if(c == eof)
+            break;
+
+        if(!is_hex(c))
+            throw json_error(std::string("expected hex digit, found ") + std::string(1, c));
+
+        wc <<= 4;
+        wc |= single_decode((char)c);
+    }
+
+    std::string value;
+
+    char byte;
+
+    byte = wc >> 24;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 16;
+    if(byte)
+        value += byte;
+
+    byte = wc >> 8;
+    if(byte)
+        value += byte;
+
+    byte = wc & 0xff;
+    value += byte;
+
+    return value;
+}
+
+token extract_string(std::istream& input) {
+    std::string value;
+
+    int c;
+    while((c = input.get()) != eof && c != '"') {
+        if(c == '\\') {
+            c = input.get();
+            switch(c) {
+            case '/':
+            case '\\':
+            case '"':
+                value += c;
+                break;
+
+            case 'b':
+                value += '\b';
+                break;
+            case 'f':
+                value += '\f';
+                break;
+            case 'n':
+                value += '\n';
+                break;
+            case 'r':
+                value += '\r';
+                break;
+            case 't':
+                value += '\t';
+                break;
+
+            case 'u': {
+                value += extract_utf8(input);
+            } break;
+
+            default:
+                value += c;
+                break;
+            }
+        } else
+            value += c;
+    }
+
+    return token{token::type_t::e_string, std::move(value)};
+}
+
+token next_token(std::istream& input) {
+    int c = non_ws(input);
+    if(c != eof) {
+        switch(c) {
+        case '{':
+            return token{token::type_t::e_start_mapping};
+        case '}':
+            return token{token::type_t::e_end_mapping};
+        case '[':
+            return token{token::type_t::e_start_sequence};
+        case ']':
+            return token{token::type_t::e_end_sequence};
+        case ',':
+            return token{token::type_t::e_separator};
+        case ':':
+            return token{token::type_t::e_mapper};
+
+        case 't':
+            extract_literal(input, 't', "rue");
+            return token{token::type_t::e_true, "true"};
+        case 'f':
+            extract_literal(input, 'f', "alse");
+            return token{token::type_t::e_false, "false"};
+        case 'n':
+            extract_literal(input, 'n', "ull");
+            return token{token::type_t::e_null, "null"};
+
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case '-':
+        case '+':
+            return extract_number(input, c);
+
+        case '"':
+            return extract_string(input);
+
+        default:
+            throw json_error(std::string("unexpected token ") + std::string(1, c));
+        }
+    }
+    return token{token::type_t::e_eof};
+}
+
+} // namespace json
+
 void to_kjson(kjson::builder &builder, const Nested &v);
 void from_kjson(const kjson::document &doc, Nested &target);
 
@@ -272,7 +509,6 @@ void from_kjson(const kjson::document &doc, VectorTo &target) {
         from_kjson(it->second, target.v);
     }
 }
-
 
 } // anonymous namespace
 
