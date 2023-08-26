@@ -106,6 +106,16 @@ TEST(Scratchpad, extraction) {
     EXPECT_EQ("def", c.b.s);
 }
 
+TEST(Scratchpad, extraction_with_extra) {
+    std::stringstream stream(R"({ "a": { "s": "abc" }, "b": { "s": "def" }, "c": 123, "d": [456], "e": {"f": true} })");
+    sp::Compound      c;
+
+    stream >> c;
+
+    EXPECT_EQ("abc", c.a.s);
+    EXPECT_EQ("def", c.b.s);
+}
+
 RC_GTEST_PROP(Scratchpad, marshalling, (string a, string b)) {
     sp::Compound c1{sp::Nested{std::move(a)}, sp::Nested{std::move(b)}};
 

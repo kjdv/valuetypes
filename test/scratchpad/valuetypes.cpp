@@ -497,8 +497,13 @@ token expect_and_consume(tokenizer& input, token::type_t e) {
     return t;
 }
 
+struct sink {};
+
 template <typename T>
 void value(tokenizer& input, T& target);
+
+template <typename T>
+void value(tokenizer& input, sink target);
 
 template <typename T>
 void object(tokenizer& input, T& target);
@@ -595,6 +600,32 @@ void value(tokenizer& input, T& target) {
     }
 }
 
+void value(tokenizer& input, sink target) {
+    auto& tok = input.peek();
+    switch(tok.tok) {
+    case token::type_t::e_start_mapping:
+        object(input, target);
+        break;
+    case token::type_t::e_start_sequence: {
+        std::vector<sink> v;
+        array(input, v);
+        break;
+    }
+    case token::type_t::e_null:
+    case token::type_t::e_false:
+    case token::type_t::e_true:
+    case token::type_t::e_uint:
+    case token::type_t::e_int:
+    case token::type_t::e_float:
+    case token::type_t::e_string:
+        // consume and ignore
+        input.next();
+        break;
+    default:
+        throw json_error(std::string("expected value, found " + to_string(tok)));
+    }
+}
+
 // forward declarations
 void member(tokenizer& input, sp::Nested& target);
 void member(tokenizer& input, sp::Compound& target);
@@ -647,8 +678,8 @@ void member(tokenizer& input, sp::Nested& target) {
     if(key.value == "s") {
         element(input, target.s);
     } else {
-        // todo: tolerate this
-        throw json_error(std::string("unknown key: ") + to_string(key));
+        sink s;
+        element(input, s);
     }
 }
 
@@ -659,8 +690,8 @@ void member(tokenizer& input, sp::Compound& target) {
     } else if(key.value == "b") {
         element(input, target.b);
     } else {
-        // todo: tolerate this
-        throw json_error(std::string("unknown key: ") + to_string(key));
+        sink s;
+        element(input, s);
     }
 }
 
@@ -669,8 +700,8 @@ void member(tokenizer& input, sp::OptionalVectors& target) {
     if(key.value == "v") {
         element(input, target.v);
     } else {
-        // todo: tolerate this
-        throw json_error(std::string("unknown key: ") + to_string(key));
+        sink s;
+        element(input, s);
     }
 }
 
@@ -679,8 +710,8 @@ void member(tokenizer& input, sp::VectorTo& target) {
     if(key.value == "v") {
         element(input, target.v);
     } else {
-        // todo: tolerate this
-        throw json_error(std::string("unknown key: ") + to_string(key));
+        sink s;
+        element(input, s);
     }
 }
 
