@@ -657,9 +657,8 @@ void member(tokenizer &input, Compound &target);
 void member(tokenizer &input, OptionalVectors &target);
 void member(tokenizer &input, VectorTo &target);
 void member(tokenizer &input, Variants &target);
-
 struct Variants_v {
-    std::variant<int, std::string, std::optional<Nested>>& target;
+    std::variant<int, std::string, std::optional<Nested>>& base;
 };
 void member(tokenizer& input, Variants_v& target);
 
@@ -791,7 +790,8 @@ void member(tokenizer &input, Variants &target) {
     if(key.value == "v") {
         Variants_v t{target.v};
         element(input, t);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
@@ -800,15 +800,18 @@ void member(tokenizer &input, Variants &target) {
 void member(tokenizer& input, Variants_v& target) {
     auto key = extract_key(input);
     if(key.value == "int") {
-        target.target.emplace<int>();
-        element(input, std::get<int>(target.target));
-    } else if(key.value == "custom_str") {
-        target.target.emplace<std::string>();
-        element(input, std::get<std::string>(target.target));
-    } else if(key.value == "std::optional<Nested>") {
-        target.target.emplace<std::optional<Nested>>();
-        element(input, std::get<std::optional<Nested>>(target.target));
-    } else {
+        target.base.emplace<int>();
+        element(input, std::get<int>(target.base));
+    }
+    else if(key.value == "custom_str") {
+        target.base.emplace<std::string>();
+        element(input, std::get<std::string>(target.base));
+    }
+    else if(key.value == "std::optional<Nested>") {
+        target.base.emplace<std::optional<Nested>>();
+        element(input, std::get<std::optional<Nested>>(target.base));
+    }
+    else {
         sink s;
         element(input, s);
     }
@@ -835,7 +838,7 @@ void to_json(std::ostream& out, const T& v) {
             }
             to_json(out, item);
         }
-        out << " ]";
+        out << ']';
     } else if constexpr(std::is_same_v<bool, T>) {
         out << std::boolalpha << v;
     } else if constexpr(std::is_floating_point_v<T>) {
@@ -852,9 +855,9 @@ void to_json(std::ostream& out, const T& v) {
 
 void to_json(std::ostream& out, const Nested &v) {
     out << "{ ";
-    out << std::quoted("s") << ':';
+    out << std::quoted("s") << ": ";
     to_json(out, v.s);
-    out << " }";
+    out << '}';
 }
 
 void from_json(std::istream& in, Nested &v) {
@@ -864,12 +867,12 @@ void from_json(std::istream& in, Nested &v) {
 
 void to_json(std::ostream& out, const Compound &v) {
     out << "{ ";
-    out << std::quoted("a") << ':';
+    out << std::quoted("a") << ": ";
     to_json(out, v.a);
     out << ", ";
-    out << std::quoted("b") << ':';
+    out << std::quoted("b") << ": ";
     to_json(out, v.b);
-    out << " }";
+    out << '}';
 }
 
 void from_json(std::istream& in, Compound &v) {
@@ -879,9 +882,9 @@ void from_json(std::istream& in, Compound &v) {
 
 void to_json(std::ostream& out, const OptionalVectors &v) {
     out << "{ ";
-    out << std::quoted("v") << ':';
+    out << std::quoted("v") << ": ";
     to_json(out, v.v);
-    out << " }";
+    out << '}';
 }
 
 void from_json(std::istream& in, OptionalVectors &v) {
@@ -891,9 +894,9 @@ void from_json(std::istream& in, OptionalVectors &v) {
 
 void to_json(std::ostream& out, const VectorTo &v) {
     out << "{ ";
-    out << std::quoted("v") << ':';
+    out << std::quoted("v") << ": ";
     to_json(out, v.v);
-    out << " }";
+    out << '}';
 }
 
 void from_json(std::istream& in, VectorTo &v) {
@@ -904,24 +907,25 @@ void from_json(std::istream& in, VectorTo &v) {
 void to_json(std::ostream& out, const Variants &v) {
     out << "{ ";
     out << std::quoted("v") << ": ";
-    out << " { ";
+    out << "{ ";
     std::visit([&out](auto&& item) {
         using T = std::decay_t<decltype(item)>;
 
         if constexpr (std::is_same_v<T, int>) {
             out << std::quoted("int") << ": ";
             to_json(out, item);
-        } else if constexpr(std::is_same_v<T, std::string>) {
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
             out << std::quoted("custom_str") << ": ";
             to_json(out, item);
-        } else {
+        }
+        else if constexpr (std::is_same_v<T, std::optional<Nested>>) {
             out << std::quoted("std::optional<Nested>") << ": ";
             to_json(out, item);
         }
-    },
-               v.v);
-    out << " }";
-    out << " }";
+    }, v.v);
+    out << '}';
+    out << '}';
 }
 
 void from_json(std::istream& in, Variants &v) {

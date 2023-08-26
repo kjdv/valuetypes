@@ -674,7 +674,7 @@ void to_json(std::ostream& out, const {{ typedef.name }} &v) {
         using T = std::decay_t<decltype(item)>;
 
 ## for vt in member.value_types
-        {% if not loop.is_first %}else {% endif %} if constexpr (std::is_same_v<T, {{ vt.type }}>) {
+        {% if not loop.is_first %}else {% endif %}if constexpr (std::is_same_v<T, {{ vt.type }}>) {
             out << std::quoted("{{ vt.name }}") << ": ";
             to_json(out, item);
         }
