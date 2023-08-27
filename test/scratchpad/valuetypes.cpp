@@ -257,9 +257,15 @@ std::string extract_string(std::istream& input) {
             throw json_error("failed to extract string");
         }
     } else {
-        // read until the next ws, interpret as string
+        // read until the next ws or special char, interpret as string
         // this allows the qol of not always having to quote strings
-        if(!(input >> value)) {
+        char c;
+        while (input && (c = input.peek()) && (std::isalnum(c) || c == '+' || c == '-' || c == '.')) {
+            value += c;
+            input.get();
+        }
+
+        if (value.empty()) {
             throw json_error("failed to extract string");
         }
     }
@@ -382,16 +388,15 @@ void value(std::istream& input, sink target) {
 }
 
 // forward declarations
-void member(std::istream& input, Nested& target);
-void member(std::istream& input, Compound& target);
-void member(std::istream& input, OptionalVectors& target);
-void member(std::istream& input, VectorTo& target);
-void member(std::istream& input, Variants& target);
+void member(std::istream &input, Nested &target);
+void member(std::istream &input, Compound &target);
+void member(std::istream &input, OptionalVectors &target);
+void member(std::istream &input, VectorTo &target);
+void member(std::istream &input, Variants &target);
 struct Variants_v {
     std::variant<int, std::string, std::optional<Nested>>& base;
 };
 void member(std::istream& input, Variants_v& target);
-
 template <typename T>
 void object(std::istream& input, T& target) {
     // object
@@ -474,50 +479,56 @@ void member(std::istream& input, T& target) {
     element(input, target);
 }
 
-void member(std::istream& input, Nested& target) {
+void member(std::istream &input, Nested &target) {
     auto key = extract_key(input);
     if(key == "s") {
         element(input, target.s);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream& input, Compound& target) {
+void member(std::istream &input, Compound &target) {
     auto key = extract_key(input);
     if(key == "a") {
         element(input, target.a);
-    } else if(key == "b") {
+    } 
+    else if(key == "b") {
         element(input, target.b);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream& input, OptionalVectors& target) {
+void member(std::istream &input, OptionalVectors &target) {
     auto key = extract_key(input);
     if(key == "v") {
         element(input, target.v);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream& input, VectorTo& target) {
+void member(std::istream &input, VectorTo &target) {
     auto key = extract_key(input);
     if(key == "v") {
         element(input, target.v);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream& input, Variants& target) {
+void member(std::istream &input, Variants &target) {
     auto key = extract_key(input);
     if(key == "v") {
         Variants_v t{target.v};
         element(input, t);
-    } else {
+    } 
+    else {
         sink s;
         element(input, s);
     }
@@ -528,13 +539,16 @@ void member(std::istream& input, Variants_v& target) {
     if(key == "int") {
         target.base.emplace<int>();
         element(input, std::get<int>(target.base));
-    } else if(key == "custom_str") {
+    }
+    else if(key == "custom_str") {
         target.base.emplace<std::string>();
         element(input, std::get<std::string>(target.base));
-    } else if(key == "std::optional<Nested>") {
+    }
+    else if(key == "std::optional<Nested>") {
         target.base.emplace<std::optional<Nested>>();
         element(input, std::get<std::optional<Nested>>(target.base));
-    } else {
+    }
+    else {
         sink s;
         element(input, s);
     }

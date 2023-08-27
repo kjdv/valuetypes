@@ -99,9 +99,15 @@ std::string extract_string(std::istream& input) {
             throw json_error("failed to extract string");
         }
     } else {
-        // read until the next ws, interpret as string
+        // read until the next ws or special char, interpret as string
         // this allows the qol of not always having to quote strings
-        if(!(input >> value)) {
+        char c;
+        while (input && (c = input.peek()) && (std::isalnum(c) || c == '+' || c == '-' || c == '.')) {
+            value += c;
+            input.get();
+        }
+
+        if (value.empty()) {
             throw json_error("failed to extract string");
         }
     }
