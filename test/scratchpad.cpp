@@ -96,6 +96,15 @@ TEST(Scratchpad, hashIsUsableForContainers) {
     EXPECT_NE(s.end(), s.find(c2));
 }
 
+TEST(Scratchpad, extraction_simple) {
+    std::stringstream stream(R"({ "s": "abc" })");
+    sp::Nested        n;
+
+    stream >> n;
+
+    EXPECT_EQ("abc", n.s);
+}
+
 TEST(Scratchpad, extraction) {
     std::stringstream stream(R"({ "a": { "s": "abc" }, "b": { "s": "def" } })");
     sp::Compound      c;
