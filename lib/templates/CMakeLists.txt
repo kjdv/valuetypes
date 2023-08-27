@@ -16,8 +16,12 @@ set(template_sources
 )
 
 function(generate_template name)
-    file(READ ${name}.cpp.inja content)
-    configure_file(template.cpp.in ${name}.cpp)
+    add_custom_command(
+        OUTPUT ${name}.cpp
+        MAIN_DEPENDENCY ${name}.cpp.inja
+        COMMAND ${CMAKE_COMMAND} -Dname=${name} -P "${CMAKE_CURRENT_LIST_DIR}/generate_template.cmake"
+        DEPENDS template.cpp.in
+    )
 endfunction()
 
 generate_template(header)
