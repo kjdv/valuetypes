@@ -7,8 +7,8 @@
 #include <variant>
 #include <algorithm>
 ## if options.json
-#include <kjson/json.hh>
-#include <composite/make.hh>
+#include <iomanip>
+#include <limits>
 ## endif
 
 {% if namespace %}namespace {{ namespace }} { {% endif %}

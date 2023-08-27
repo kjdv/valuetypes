@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
                 ("f,filename", "Base filename (without extention) for the generated files",
                  cxxopts::value<std::string>()->default_value("valuetypes"))
                 ("c,cmake", "Generate CMakeLists.txt")
-                ("j,json", "Enable json (de)serialisation and iostream operations. This introduces a dependency on KJson (https://github.com/kjdv/kjson)",
+                ("j,json", "Enable json (de)serialisation and iostream operations.",
                  cxxopts::value<bool>()->default_value("false"))
                 ("input", "Input file containing type definitions",
                  cxxopts::value<std::string>())

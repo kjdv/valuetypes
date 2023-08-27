@@ -44,8 +44,8 @@ TEST(BasicTypes, json) {
 }
 
 RC_GTEST_PROP(BasicTypes, hashing, (bool truth1, int n1, double x1, string s1, bool truth2, int n2, double x2, string s2)) {
-    BasicTypes bt1{truth1, n1, x1, move(s1)};
-    BasicTypes bt2{truth2, n2, x2, move(s2)};
+    BasicTypes bt1{truth1, n1, x1, std::move(s1)};
+    BasicTypes bt2{truth2, n2, x2, std::move(s2)};
 
     auto h1 = std::hash<BasicTypes>{}(bt1);
     auto h2 = std::hash<BasicTypes>{}(bt2);
@@ -79,7 +79,7 @@ TEST(BasicTypes, hashIsUsableForContainers) {
 }
 
 RC_GTEST_PROP(BasicTypes, marshalling, (bool truth, int n, double x, string s)) {
-    BasicTypes bt1{truth, n, x, move(s)};
+    BasicTypes bt1{truth, n, x, std::move(s)};
 
     std::stringstream stream;
     stream << bt1;

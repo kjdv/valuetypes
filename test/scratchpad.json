@@ -1,0 +1,54 @@
+{
+  "ns": "sp",
+  "types": [{
+    "name": "Nested",
+    "members": [{
+      "name": "s",
+      "type": "string"
+    }]
+  },{
+    "name": "Compound",
+    "members": [{
+      "name": "a",
+      "type": "Nested"
+    }, {
+      "name": "b",
+      "type": "Nested"
+    }]
+  },{
+    "name": "OptionalVectors",
+    "members": [{
+      "name": "v",
+      "type": "vector",
+      "value_type": {
+        "type": "int",
+        "optional": true
+      },
+      "optional": true
+    }]
+  },{
+    "name": "VectorTo",
+    "members": [{
+      "name": "v",
+      "type": "vector",
+      "value_type": {
+        "type": "Nested"
+      }
+    }]
+  },{
+    "name": "Variants",
+    "members": [{
+      "name": "v",
+      "type": "variant",
+      "value_types": [{
+        "type": "int"
+      }, {
+        "type": "string",
+        "name": "custom_str"
+      }, {
+        "type": "Nested",
+        "optional": true
+      }]
+    }]
+  }]
+}

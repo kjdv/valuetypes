@@ -9,128 +9,156 @@
 #include <iomanip>
 #include <limits>
 
-namespace valuetypes { 
+namespace sp { 
 
-bool operator==(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator==(const Nested &a, const Nested &b) noexcept {
     return
-        std::tie(a.type, a.optional, a.name) ==
-        std::tie(b.type, b.optional, b.name);
+        std::tie(a.s) ==
+        std::tie(b.s);
 }
 
-bool operator!=(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator!=(const Nested &a, const Nested &b) noexcept {
     return !(a == b);
 }
 
-bool operator==(const Member &a, const Member &b) noexcept {
+bool operator==(const Compound &a, const Compound &b) noexcept {
     return
-        std::tie(a.name, a.type, a.default_value, a.optional, a.value_type, a.value_types) ==
-        std::tie(b.name, b.type, b.default_value, b.optional, b.value_type, b.value_types);
+        std::tie(a.a, a.b) ==
+        std::tie(b.a, b.b);
 }
 
-bool operator!=(const Member &a, const Member &b) noexcept {
+bool operator!=(const Compound &a, const Compound &b) noexcept {
     return !(a == b);
 }
 
-bool operator==(const Definition &a, const Definition &b) noexcept {
+bool operator==(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return
-        std::tie(a.name, a.members) ==
-        std::tie(b.name, b.members);
+        std::tie(a.v) ==
+        std::tie(b.v);
 }
 
-bool operator!=(const Definition &a, const Definition &b) noexcept {
+bool operator!=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return !(a == b);
 }
 
-bool operator==(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator==(const VectorTo &a, const VectorTo &b) noexcept {
     return
-        std::tie(a.ns, a.types) ==
-        std::tie(b.ns, b.types);
+        std::tie(a.v) ==
+        std::tie(b.v);
 }
 
-bool operator!=(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator!=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(a == b);
+}
+
+bool operator==(const Variants &a, const Variants &b) noexcept {
+    return
+        std::tie(a.v) ==
+        std::tie(b.v);
+}
+
+bool operator!=(const Variants &a, const Variants &b) noexcept {
     return !(a == b);
 }
 
 
-bool operator<(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator<(const Nested &a, const Nested &b) noexcept {
     return
-        std::tie(a.type, a.optional, a.name) <
-        std::tie(b.type, b.optional, b.name);
+        std::tie(a.s) <
+        std::tie(b.s);
 }
 
-bool operator<=(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator<=(const Nested &a, const Nested &b) noexcept {
     return !(b < a);
 }
 
-bool operator>(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator>(const Nested &a, const Nested &b) noexcept {
     return b < a;
 }
 
-bool operator>=(const TemplateParameter &a, const TemplateParameter &b) noexcept {
+bool operator>=(const Nested &a, const Nested &b) noexcept {
     return !(a < b);
 }
 
-bool operator<(const Member &a, const Member &b) noexcept {
+bool operator<(const Compound &a, const Compound &b) noexcept {
     return
-        std::tie(a.name, a.type, a.default_value, a.optional, a.value_type, a.value_types) <
-        std::tie(b.name, b.type, b.default_value, b.optional, b.value_type, b.value_types);
+        std::tie(a.a, a.b) <
+        std::tie(b.a, b.b);
 }
 
-bool operator<=(const Member &a, const Member &b) noexcept {
+bool operator<=(const Compound &a, const Compound &b) noexcept {
     return !(b < a);
 }
 
-bool operator>(const Member &a, const Member &b) noexcept {
+bool operator>(const Compound &a, const Compound &b) noexcept {
     return b < a;
 }
 
-bool operator>=(const Member &a, const Member &b) noexcept {
+bool operator>=(const Compound &a, const Compound &b) noexcept {
     return !(a < b);
 }
 
-bool operator<(const Definition &a, const Definition &b) noexcept {
+bool operator<(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return
-        std::tie(a.name, a.members) <
-        std::tie(b.name, b.members);
+        std::tie(a.v) <
+        std::tie(b.v);
 }
 
-bool operator<=(const Definition &a, const Definition &b) noexcept {
+bool operator<=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return !(b < a);
 }
 
-bool operator>(const Definition &a, const Definition &b) noexcept {
+bool operator>(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return b < a;
 }
 
-bool operator>=(const Definition &a, const Definition &b) noexcept {
+bool operator>=(const OptionalVectors &a, const OptionalVectors &b) noexcept {
     return !(a < b);
 }
 
-bool operator<(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator<(const VectorTo &a, const VectorTo &b) noexcept {
     return
-        std::tie(a.ns, a.types) <
-        std::tie(b.ns, b.types);
+        std::tie(a.v) <
+        std::tie(b.v);
 }
 
-bool operator<=(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator<=(const VectorTo &a, const VectorTo &b) noexcept {
     return !(b < a);
 }
 
-bool operator>(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator>(const VectorTo &a, const VectorTo &b) noexcept {
     return b < a;
 }
 
-bool operator>=(const DefinitionStore &a, const DefinitionStore &b) noexcept {
+bool operator>=(const VectorTo &a, const VectorTo &b) noexcept {
+    return !(a < b);
+}
+
+bool operator<(const Variants &a, const Variants &b) noexcept {
+    return
+        std::tie(a.v) <
+        std::tie(b.v);
+}
+
+bool operator<=(const Variants &a, const Variants &b) noexcept {
+    return !(b < a);
+}
+
+bool operator>(const Variants &a, const Variants &b) noexcept {
+    return b < a;
+}
+
+bool operator>=(const Variants &a, const Variants &b) noexcept {
     return !(a < b);
 }
 
 
 
-} // } // namespace valuetypes
+} // } // namespace sp
 
 // start iostream_definitions.cpp.inja
 
-namespace valuetypes { 
+namespace sp { 
 namespace {
 
 template <typename T>
@@ -360,10 +388,15 @@ void value(std::istream& input, sink target) {
 }
 
 // forward declarations
-void member(std::istream &input, TemplateParameter &target);
-void member(std::istream &input, Member &target);
-void member(std::istream &input, Definition &target);
-void member(std::istream &input, DefinitionStore &target);
+void member(std::istream &input, Nested &target);
+void member(std::istream &input, Compound &target);
+void member(std::istream &input, OptionalVectors &target);
+void member(std::istream &input, VectorTo &target);
+void member(std::istream &input, Variants &target);
+struct Variants_v {
+    std::variant<int, std::string, std::optional<Nested>>& base;
+};
+void member(std::istream& input, Variants_v& target);
 template <typename T>
 void object(std::istream& input, T& target) {
     // object
@@ -446,68 +479,75 @@ void member(std::istream& input, T& target) {
     element(input, target);
 }
 
-void member(std::istream &input, TemplateParameter &target) {
+void member(std::istream &input, Nested &target) {
     auto key = extract_key(input);
-    if(key == "type") {
-        element(input, target.type);
-    } 
-    else if(key == "optional") {
-        element(input, target.optional);
-    } 
-    else if(key == "name") {
-        element(input, target.name);
+    if(key == "s") {
+        element(input, target.s);
     } 
     else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream &input, Member &target) {
+void member(std::istream &input, Compound &target) {
     auto key = extract_key(input);
-    if(key == "name") {
-        element(input, target.name);
+    if(key == "a") {
+        element(input, target.a);
     } 
-    else if(key == "type") {
-        element(input, target.type);
-    } 
-    else if(key == "default_value") {
-        element(input, target.default_value);
-    } 
-    else if(key == "optional") {
-        element(input, target.optional);
-    } 
-    else if(key == "value_type") {
-        element(input, target.value_type);
-    } 
-    else if(key == "value_types") {
-        element(input, target.value_types);
+    else if(key == "b") {
+        element(input, target.b);
     } 
     else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream &input, Definition &target) {
+void member(std::istream &input, OptionalVectors &target) {
     auto key = extract_key(input);
-    if(key == "name") {
-        element(input, target.name);
-    } 
-    else if(key == "members") {
-        element(input, target.members);
+    if(key == "v") {
+        element(input, target.v);
     } 
     else {
         sink s;
         element(input, s);
     }
 }
-void member(std::istream &input, DefinitionStore &target) {
+void member(std::istream &input, VectorTo &target) {
     auto key = extract_key(input);
-    if(key == "ns") {
-        element(input, target.ns);
+    if(key == "v") {
+        element(input, target.v);
     } 
-    else if(key == "types") {
-        element(input, target.types);
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+void member(std::istream &input, Variants &target) {
+    auto key = extract_key(input);
+    if(key == "v") {
+        Variants_v t{target.v};
+        element(input, t);
     } 
+    else {
+        sink s;
+        element(input, s);
+    }
+}
+
+void member(std::istream& input, Variants_v& target) {
+    auto key = extract_key(input);
+    if(key == "int") {
+        target.base.emplace<int>();
+        element(input, std::get<int>(target.base));
+    }
+    else if(key == "custom_str") {
+        target.base.emplace<std::string>();
+        element(input, std::get<std::string>(target.base));
+    }
+    else if(key == "std::optional<Nested>") {
+        target.base.emplace<std::optional<Nested>>();
+        element(input, std::get<std::optional<Nested>>(target.base));
+    }
     else {
         sink s;
         element(input, s);
@@ -550,118 +590,132 @@ void to_json(std::ostream& out, const T& v) {
 
 } // anonymous namespace
 
-void to_json(std::ostream& out, const TemplateParameter &v) {
+void to_json(std::ostream& out, const Nested &v) {
     out << "{ ";
-    out << std::quoted("type") << ": ";
-    to_json(out, v.type);
-    out << ", ";
-    out << std::quoted("optional") << ": ";
-    to_json(out, v.optional);
-    out << ", ";
-    out << std::quoted("name") << ": ";
-    to_json(out, v.name);
+    out << std::quoted("s") << ": ";
+    to_json(out, v.s);
     out << '}';
 }
 
-void from_json(std::istream& in, TemplateParameter &v) {
+void from_json(std::istream& in, Nested &v) {
     json::value(in, v);
 }
 
-void to_json(std::ostream& out, const Member &v) {
+void to_json(std::ostream& out, const Compound &v) {
     out << "{ ";
-    out << std::quoted("name") << ": ";
-    to_json(out, v.name);
+    out << std::quoted("a") << ": ";
+    to_json(out, v.a);
     out << ", ";
-    out << std::quoted("type") << ": ";
-    to_json(out, v.type);
-    out << ", ";
-    out << std::quoted("default_value") << ": ";
-    to_json(out, v.default_value);
-    out << ", ";
-    out << std::quoted("optional") << ": ";
-    to_json(out, v.optional);
-    out << ", ";
-    out << std::quoted("value_type") << ": ";
-    to_json(out, v.value_type);
-    out << ", ";
-    out << std::quoted("value_types") << ": ";
-    to_json(out, v.value_types);
+    out << std::quoted("b") << ": ";
+    to_json(out, v.b);
     out << '}';
 }
 
-void from_json(std::istream& in, Member &v) {
+void from_json(std::istream& in, Compound &v) {
     json::value(in, v);
 }
 
-void to_json(std::ostream& out, const Definition &v) {
+void to_json(std::ostream& out, const OptionalVectors &v) {
     out << "{ ";
-    out << std::quoted("name") << ": ";
-    to_json(out, v.name);
-    out << ", ";
-    out << std::quoted("members") << ": ";
-    to_json(out, v.members);
+    out << std::quoted("v") << ": ";
+    to_json(out, v.v);
     out << '}';
 }
 
-void from_json(std::istream& in, Definition &v) {
+void from_json(std::istream& in, OptionalVectors &v) {
     json::value(in, v);
 }
 
-void to_json(std::ostream& out, const DefinitionStore &v) {
+void to_json(std::ostream& out, const VectorTo &v) {
     out << "{ ";
-    out << std::quoted("ns") << ": ";
-    to_json(out, v.ns);
-    out << ", ";
-    out << std::quoted("types") << ": ";
-    to_json(out, v.types);
+    out << std::quoted("v") << ": ";
+    to_json(out, v.v);
     out << '}';
 }
 
-void from_json(std::istream& in, DefinitionStore &v) {
+void from_json(std::istream& in, VectorTo &v) {
     json::value(in, v);
 }
 
-} // namespace valuetypes
+void to_json(std::ostream& out, const Variants &v) {
+    out << "{ ";
+    out << std::quoted("v") << ": ";
+    out << "{ ";
+    std::visit([&out](auto&& item) {
+        using T = std::decay_t<decltype(item)>;
+
+        if constexpr (std::is_same_v<T, int>) {
+            out << std::quoted("int") << ": ";
+            to_json(out, item);
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            out << std::quoted("custom_str") << ": ";
+            to_json(out, item);
+        }
+        else if constexpr (std::is_same_v<T, std::optional<Nested>>) {
+            out << std::quoted("std::optional<Nested>") << ": ";
+            to_json(out, item);
+        }
+    }, v.v);
+    out << '}';
+    out << '}';
+}
+
+void from_json(std::istream& in, Variants &v) {
+    json::value(in, v);
+}
+
+} // namespace sp
 
 namespace std {
 
-std::ostream &operator<<(std::ostream& out, const valuetypes::TemplateParameter &v) {
-    valuetypes::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::Nested &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, valuetypes::TemplateParameter &v) {
-    valuetypes::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::Nested &v) {
+    sp::from_json(in, v);
     return in;
 }
 
-std::ostream &operator<<(std::ostream& out, const valuetypes::Member &v) {
-    valuetypes::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::Compound &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, valuetypes::Member &v) {
-    valuetypes::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::Compound &v) {
+    sp::from_json(in, v);
     return in;
 }
 
-std::ostream &operator<<(std::ostream& out, const valuetypes::Definition &v) {
-    valuetypes::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::OptionalVectors &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, valuetypes::Definition &v) {
-    valuetypes::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::OptionalVectors &v) {
+    sp::from_json(in, v);
     return in;
 }
 
-std::ostream &operator<<(std::ostream& out, const valuetypes::DefinitionStore &v) {
-    valuetypes::to_json(out, v);
+std::ostream &operator<<(std::ostream& out, const sp::VectorTo &v) {
+    sp::to_json(out, v);
     return out;
 }
 
-std::istream &operator>>(std::istream& in, valuetypes::DefinitionStore &v) {
-    valuetypes::from_json(in, v);
+std::istream &operator>>(std::istream& in, sp::VectorTo &v) {
+    sp::from_json(in, v);
+    return in;
+}
+
+std::ostream &operator<<(std::ostream& out, const sp::Variants &v) {
+    sp::to_json(out, v);
+    return out;
+}
+
+std::istream &operator>>(std::istream& in, sp::Variants &v) {
+    sp::from_json(in, v);
     return in;
 }
 
@@ -713,20 +767,24 @@ std::size_t hash_combine(const Head &head, Tail... tail) {
 
 } // anonymous namespace
 
-std::size_t hash<valuetypes::TemplateParameter>::operator()(const valuetypes::TemplateParameter &v) const noexcept {
-    return hash_combine(v.type, v.optional, v.name);
+std::size_t hash<sp::Nested>::operator()(const sp::Nested &v) const noexcept {
+    return hash_combine(v.s);
 }
 
-std::size_t hash<valuetypes::Member>::operator()(const valuetypes::Member &v) const noexcept {
-    return hash_combine(v.name, v.type, v.default_value, v.optional, v.value_type, v.value_types);
+std::size_t hash<sp::Compound>::operator()(const sp::Compound &v) const noexcept {
+    return hash_combine(v.a, v.b);
 }
 
-std::size_t hash<valuetypes::Definition>::operator()(const valuetypes::Definition &v) const noexcept {
-    return hash_combine(v.name, v.members);
+std::size_t hash<sp::OptionalVectors>::operator()(const sp::OptionalVectors &v) const noexcept {
+    return hash_combine(v.v);
 }
 
-std::size_t hash<valuetypes::DefinitionStore>::operator()(const valuetypes::DefinitionStore &v) const noexcept {
-    return hash_combine(v.ns, v.types);
+std::size_t hash<sp::VectorTo>::operator()(const sp::VectorTo &v) const noexcept {
+    return hash_combine(v.v);
+}
+
+std::size_t hash<sp::Variants>::operator()(const sp::Variants &v) const noexcept {
+    return hash_combine(v.v);
 }
 
 } // namespace std
@@ -736,29 +794,25 @@ std::size_t hash<valuetypes::DefinitionStore>::operator()(const valuetypes::Defi
 
 namespace std {
 
-void swap(valuetypes::TemplateParameter &a, valuetypes::TemplateParameter &b) noexcept {
-    swap(a.type, b.type);
-    swap(a.optional, b.optional);
-    swap(a.name, b.name);
+void swap(sp::Nested &a, sp::Nested &b) noexcept {
+    swap(a.s, b.s);
 }
 
-void swap(valuetypes::Member &a, valuetypes::Member &b) noexcept {
-    swap(a.name, b.name);
-    swap(a.type, b.type);
-    swap(a.default_value, b.default_value);
-    swap(a.optional, b.optional);
-    swap(a.value_type, b.value_type);
-    swap(a.value_types, b.value_types);
+void swap(sp::Compound &a, sp::Compound &b) noexcept {
+    swap(a.a, b.a);
+    swap(a.b, b.b);
 }
 
-void swap(valuetypes::Definition &a, valuetypes::Definition &b) noexcept {
-    swap(a.name, b.name);
-    swap(a.members, b.members);
+void swap(sp::OptionalVectors &a, sp::OptionalVectors &b) noexcept {
+    swap(a.v, b.v);
 }
 
-void swap(valuetypes::DefinitionStore &a, valuetypes::DefinitionStore &b) noexcept {
-    swap(a.ns, b.ns);
-    swap(a.types, b.types);
+void swap(sp::VectorTo &a, sp::VectorTo &b) noexcept {
+    swap(a.v, b.v);
+}
+
+void swap(sp::Variants &a, sp::Variants &b) noexcept {
+    swap(a.v, b.v);
 }
 
 } // namespace std
